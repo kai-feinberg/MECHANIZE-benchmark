@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brain-It-On Benchmark Prototype</title>
+  </head>
+  <body>
+    <main id="app" class="app-shell">
+      <section class="game-panel" aria-label="Playable physics level">
+        <canvas id="game" aria-label="Lift the ball off the ground"></canvas>
+      </section>
+      <aside class="control-panel" aria-label="Level controls">
+        <div>
+          <p class="eyebrow">Playable V1</p>
+          <h1>Lift the ball off the ground</h1>
+          <p class="copy">Draw one heavy stroke. Release to let it fall, push, tip, or wedge the ball upward.</p>
+        </div>
+        <div class="status-grid">
+          <div>
+            <span>Status</span>
+            <strong id="status">Ready</strong>
+          </div>
+          <div>
+            <span>Goal</span>
+            <strong id="goal">+150 for 0.5s</strong>
+          </div>
+          <div>
+            <span>Stroke</span>
+            <strong id="stroke-count">0 / 1</strong>
+          </div>
+        </div>
+        <div class="button-row">
+          <button id="toggle-run" type="button">Pause</button>
+          <button id="toggle-physics" type="button">Show physics</button>
+          <button id="reset" type="button">Reset</button>
+          <button id="clear-stroke" type="button">Clear stroke</button>
+        </div>
+        <label class="json-label" for="stroke-json">Current stroke JSON</label>
+        <textarea id="stroke-json" readonly spellcheck="false" placeholder="Draw a stroke to export points."></textarea>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
