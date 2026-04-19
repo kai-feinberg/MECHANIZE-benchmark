@@ -13,10 +13,17 @@
       <aside class="control-panel" aria-label="Level controls">
         <div>
           <p class="eyebrow">Playable V1</p>
-          <h1>Lift the ball off the ground</h1>
-          <p class="copy">Draw one heavy stroke. Release to let it fall, push, tip, or wedge the ball upward.</p>
+          <h1 id="level-title">Lift the ball off the ground</h1>
+          <p id="level-copy" class="copy">Draw one heavy stroke. Release to let it fall, push, tip, or wedge the ball upward.</p>
         </div>
         <div class="status-grid">
+          <div>
+            <label class="select-label" for="level-select">Level</label>
+            <select id="level-select">
+              <option value="lift-ball-v1">Lift the ball</option>
+              <option value="hit-left-wall-v1">Hit the left wall</option>
+            </select>
+          </div>
           <div>
             <span>Status</span>
             <strong id="status">Ready</strong>

@@ -1,11 +1,16 @@
 import { Body, Composite } from "matter-js";
 import "./styles.css";
+import { levels } from "./sim/level";
 import { createSimulation } from "./sim/simulation";
 import { measureStrokeLength, prepareStrokePoints } from "./sim/strokeBody";
 import type { StrokeAction, Vec2 } from "./sim/types";
 
 const canvas = requireElement<HTMLCanvasElement>("#game");
+const levelTitleEl = requireElement<HTMLElement>("#level-title");
+const levelCopyEl = requireElement<HTMLElement>("#level-copy");
 const statusEl = requireElement<HTMLElement>("#status");
+const goalEl = requireElement<HTMLElement>("#goal");
+const levelSelect = requireElement<HTMLSelectElement>("#level-select");
 const strokeCountEl = requireElement<HTMLElement>("#stroke-count");
 const strokeJsonEl = requireElement<HTMLTextAreaElement>("#stroke-json");
 const toggleRunButton = requireElement<HTMLButtonElement>("#toggle-run");
@@ -14,7 +19,7 @@ const resetButton = requireElement<HTMLButtonElement>("#reset");
 const clearStrokeButton = requireElement<HTMLButtonElement>("#clear-stroke");
 const context = requireCanvasContext(canvas);
 
-const sim = createSimulation();
+let sim = createSimulation(levels[0]);
 const pointerScale = { x: 1, y: 1 };
 let running = true;
 let drawing = false;
@@ -26,7 +31,7 @@ let showPhysicsBodies = false;
 let lastFrameTime = performance.now();
 let accumulator = 0;
 
-const strokeWidth = 28;
+const strokeWidth = 18;
 
 function resizeCanvas(): void {
   const parent = canvas.parentElement;
@@ -130,6 +135,19 @@ function resetLevel(): void {
   updateUi();
 }
 
+function changeLevel(): void {
+  const nextLevel = levels.find((level) => level.id === levelSelect.value) ?? levels[0];
+  sim = createSimulation(nextLevel);
+  activeStroke = [];
+  committedStroke = null;
+  committedStrokeBody = null;
+  committedStrokeLocalPoints = [];
+  running = true;
+  accumulator = 0;
+  resizeCanvas();
+  updateUi();
+}
+
 function gameLoop(now: number): void {
   const elapsed = Math.min(100, now - lastFrameTime);
   lastFrameTime = now;
@@ -154,7 +172,7 @@ function render(): void {
   drawInstruction();
 
   for (const body of Composite.allBodies(sim.engine.world)) {
-    if (body.label === "left-wall" || body.label === "right-wall" || body.label === "ceiling") {
+    if (body.label === "right-wall" || body.label === "ceiling") {
       continue;
     }
     if (body.label.startsWith("stroke:") && !showPhysicsBodies) {
@@ -246,6 +264,12 @@ function getBodyFill(body: Body): string {
   if (body.label === "floor") {
     return "#8d9791";
   }
+  if (body.label === "left-wall") {
+    return "rgba(244, 189, 55, 0.34)";
+  }
+  if (body.label === "cup") {
+    return "#f7f7f1";
+  }
   if (body.label.startsWith("stroke:") && showPhysicsBodies) {
     return "rgba(251, 251, 245, 0.72)";
   }
@@ -255,6 +279,9 @@ function getBodyFill(body: Body): string {
 function getBodyStroke(body: Body): string {
   if (body.label.startsWith("stroke:") && showPhysicsBodies) {
     return "#e94666";
+  }
+  if (body.label === "left-wall") {
+    return "#f4bd37";
   }
   return "#171b24";
 }
@@ -332,12 +359,23 @@ function updateUi(): void {
     statusEl.textContent = "Success";
   } else if (!running) {
     statusEl.textContent = "Paused";
+  } else if (sim.level.goal.type === "hit-left-wall") {
+    statusEl.textContent = sim.goal.leftWallContact ? "Wall contact" : "Get to the left wall";
   } else if (committedStroke) {
     statusEl.textContent = `Off ground ${sim.goal.consecutiveOffGroundFrames} / ${sim.goal.requiredOffGroundFrames}`;
   } else {
     statusEl.textContent = "Draw one stroke";
   }
 
+  goalEl.textContent =
+    sim.level.goal.type === "hit-left-wall"
+      ? "Hit the left wall"
+      : `Off ground for ${sim.goal.requiredOffGroundFrames} frames`;
+  levelTitleEl.textContent = sim.level.instruction;
+  levelCopyEl.textContent =
+    sim.level.goal.type === "hit-left-wall"
+      ? "Draw one light touch, ramp, or nudge to roll the small ball out of the cup and into the target wall."
+      : "Draw one heavy stroke. Release to let it fall, push, tip, or wedge the ball upward.";
   toggleRunButton.textContent = running ? "Pause" : "Run";
   togglePhysicsButton.textContent = showPhysicsBodies ? "Show visual" : "Show physics";
   strokeCountEl.textContent = `${committedStroke ? 1 : 0} / ${sim.level.limits.maxStrokes}`;
@@ -412,6 +450,7 @@ function toWorldPoint(point: Vec2, body: Body): Vec2 {
 
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("keydown", handleKeydown);
+levelSelect.addEventListener("change", changeLevel);
 canvas.addEventListener("pointerdown", beginStroke);
 canvas.addEventListener("pointermove", extendStroke);
 canvas.addEventListener("pointerup", finishStroke);

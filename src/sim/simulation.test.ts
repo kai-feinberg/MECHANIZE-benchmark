@@ -1,5 +1,6 @@
 import { Body } from "matter-js";
 import { describe, expect, it } from "vitest";
+import { hitLeftWallLevel } from "./level";
 import { createSimulation, evaluateGoal } from "./simulation";
 import type { StrokeAction } from "./types";
 
@@ -8,7 +9,7 @@ describe("game simulation", () => {
     const sim = createSimulation();
 
     expect(sim.level.world).toEqual({ width: 1000, height: 700 });
-    expect(sim.level.goal).toEqual({ offGroundFrames: 150, groundClearance: 3 });
+    expect(sim.level.goal).toEqual({ type: "off-ground", offGroundFrames: 150, groundClearance: 3 });
     expect(sim.bodies.ball.label).toBe("ball");
     expect(sim.bodies.floor.isStatic).toBe(true);
     expect(sim.goal.achieved).toBe(false);
@@ -31,17 +32,39 @@ describe("game simulation", () => {
     let goal = sim.goal;
     const floorTop = sim.level.floor.y - sim.level.floor.height / 2;
 
+    expect(sim.level.goal.type).toBe("off-ground");
+    if (sim.level.goal.type !== "off-ground") {
+      throw new Error("Expected off-ground goal.");
+    }
+
     Body.setPosition(sim.bodies.ball, {
       x: sim.level.ball.position.x,
       y: floorTop - sim.level.ball.radius - sim.level.goal.groundClearance,
     });
 
     for (let index = 0; index < sim.level.goal.offGroundFrames - 1; index += 1) {
-      goal = evaluateGoal(sim.level, sim.bodies.ball, goal.consecutiveOffGroundFrames);
+      goal = evaluateGoal(sim.level, sim.bodies.ball, goal);
       expect(goal.achieved).toBe(false);
     }
 
-    goal = evaluateGoal(sim.level, sim.bodies.ball, goal.consecutiveOffGroundFrames);
+    goal = evaluateGoal(sim.level, sim.bodies.ball, goal);
+    expect(goal.achieved).toBe(true);
+  });
+
+  it("supports the hit-left-wall level", () => {
+    const sim = createSimulation(hitLeftWallLevel);
+
+    expect(sim.level.goal).toEqual({ type: "hit-left-wall", contactFrames: 1 });
+    expect(sim.bodies.ball.circleRadius).toBe(26);
+    expect(sim.bodies.statics.length).toBeGreaterThan(0);
+
+    Body.setPosition(sim.bodies.ball, {
+      x: sim.level.ball.radius,
+      y: sim.bodies.ball.position.y,
+    });
+
+    const goal = evaluateGoal(sim.level, sim.bodies.ball, sim.goal);
+    expect(goal.leftWallContact).toBe(true);
     expect(goal.achieved).toBe(true);
   });
 
@@ -49,7 +72,7 @@ describe("game simulation", () => {
     const sim = createSimulation();
     const stroke: StrokeAction = {
       id: "test",
-      width: 28,
+      width: 18,
       points: [
         { x: 360, y: 300 },
         { x: 640, y: 300 },
@@ -71,7 +94,7 @@ describe("game simulation", () => {
   it("replays a known stroke consistently in the same runtime", () => {
     const stroke: StrokeAction = {
       id: "replay",
-      width: 28,
+      width: 18,
       points: [
         { x: 210, y: 240 },
         { x: 460, y: 260 },

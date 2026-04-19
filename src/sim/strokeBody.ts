@@ -2,7 +2,7 @@ import { Body, Bodies, Vector } from "matter-js";
 import type { StrokeAction, Vec2 } from "./types";
 
 const MIN_POINT_DISTANCE = 28;
-const RESAMPLE_DISTANCE = 64;
+const RESAMPLE_DISTANCE = 96;
 const MIN_SEGMENT_LENGTH = 6;
 const SMOOTHING_PASSES = 2;
 
@@ -62,8 +62,12 @@ export function createStrokeBody(stroke: StrokeAction): Body | null {
     };
     const angle = Math.atan2(dy, dx);
     parts.push(
-      Bodies.rectangle(center.x, center.y, length + width * 1.35, width, {
+      Bodies.rectangle(center.x, center.y, length + width * 2.4, width, {
         angle,
+        friction: 0.25,
+        frictionStatic: 0.2,
+        restitution: 0,
+        slop: 1.2,
         chamfer: {
           radius: width / 2,
         },
@@ -74,8 +78,10 @@ export function createStrokeBody(stroke: StrokeAction): Body | null {
   for (const point of [points[0], points[points.length - 1]]) {
     parts.push(
       Bodies.circle(point.x, point.y, width / 2, {
-        friction: 0.55,
-        slop: 0.6,
+        friction: 0.25,
+        frictionStatic: 0.2,
+        restitution: 0,
+        slop: 1.2,
       }),
     );
   }
@@ -87,11 +93,12 @@ export function createStrokeBody(stroke: StrokeAction): Body | null {
   return Body.create({
     label: `stroke:${stroke.id}`,
     parts,
-    density: 0.006,
-    friction: 0.55,
-    frictionAir: 0.012,
-    restitution: 0,
-    slop: 0.6,
+    density: 0.0028,
+    friction: 0.18,
+    frictionStatic: 0.2,
+    frictionAir: 0.008,
+    restitution: 0.05,
+    slop: 1.2,
     render: {
       fillStyle: "#f8f8f2",
       strokeStyle: "#151922",

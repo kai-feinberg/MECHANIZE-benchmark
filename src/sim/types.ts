@@ -22,15 +22,32 @@ export type LevelDefinition = {
   ball: {
     position: Vec2;
     radius: number;
+    density?: number;
+    friction?: number;
+    frictionStatic?: number;
+    frictionAir?: number;
+    restitution?: number;
   };
   floor: {
     y: number;
     height: number;
   };
-  goal: {
-    offGroundFrames: number;
-    groundClearance: number;
+  cup?: {
+    center: Vec2;
+    radius: number;
+    thickness: number;
+    segments: number;
   };
+  goal:
+    | {
+        type: "off-ground";
+        offGroundFrames: number;
+        groundClearance: number;
+      }
+    | {
+        type: "hit-left-wall";
+        contactFrames: number;
+      };
   limits: {
     maxStrokes: number;
   };
@@ -41,6 +58,9 @@ export type GoalState = {
   consecutiveOffGroundFrames: number;
   requiredOffGroundFrames: number;
   groundClearance: number;
+  consecutiveLeftWallContactFrames: number;
+  requiredLeftWallContactFrames: number;
+  leftWallContact: boolean;
 };
 
 export type SimulationBodies = {
@@ -49,6 +69,7 @@ export type SimulationBodies = {
   leftWall: Body;
   rightWall: Body;
   ceiling: Body;
+  statics: Body[];
   strokes: Body[];
 };
 
