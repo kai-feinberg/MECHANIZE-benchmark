@@ -12,12 +12,19 @@ const { Composite } = Matter;
 const canvas = requireElement<HTMLCanvasElement>("#game");
 const playModeButton = requireElement<HTMLButtonElement>("#play-mode");
 const traceModeButton = requireElement<HTMLButtonElement>("#trace-mode");
+const modeEyebrowEl = requireElement<HTMLElement>("#mode-eyebrow");
 const levelTitleEl = requireElement<HTMLElement>("#level-title");
 const levelCopyEl = requireElement<HTMLElement>("#level-copy");
 const statusEl = requireElement<HTMLElement>("#status");
 const goalEl = requireElement<HTMLElement>("#goal");
 const levelSelect = requireElement<HTMLSelectElement>("#level-select");
 const strokeCountEl = requireElement<HTMLElement>("#stroke-count");
+const playStats = requireElement<HTMLElement>("#play-stats");
+const traceStats = requireElement<HTMLElement>("#trace-stats");
+const traceRunEl = requireElement<HTMLElement>("#trace-run");
+const traceResultEl = requireElement<HTMLElement>("#trace-result");
+const traceFrameEl = requireElement<HTMLElement>("#trace-frame");
+const traceQuietEl = requireElement<HTMLElement>("#trace-quiet");
 const strokeJsonEl = requireElement<HTMLTextAreaElement>("#stroke-json");
 const toggleRunButton = requireElement<HTMLButtonElement>("#toggle-run");
 const togglePhysicsButton = requireElement<HTMLButtonElement>("#toggle-physics");
@@ -445,7 +452,7 @@ function drawTraceEmpty(level: LevelDefinition): void {
   context.textAlign = "center";
   context.fillText("Load a run bundle", level.world.width / 2, level.world.height / 2 - 10);
   context.font = "16px Inter, Arial, sans-serif";
-  context.fillText("Use pnpm bench --bundle run.json", level.world.width / 2, level.world.height / 2 + 22);
+  context.fillText("Use pnpm bench action.json, then upload runs/.../run.json", level.world.width / 2, level.world.height / 2 + 22);
   context.restore();
 }
 
@@ -512,6 +519,7 @@ function updateUi(): void {
     return;
   }
 
+  modeEyebrowEl.textContent = "Playable V1";
   if (sim.goal.achieved) {
     statusEl.textContent = "Success";
   } else if (!running) {
@@ -552,14 +560,18 @@ function updateTraceUi(): void {
   const frame = getCurrentTraceFrame();
   const result = traceBundle?.result;
   const totalFrames = traceBundle?.trace.frames.length ?? 0;
+  const currentFrame = frame?.frame ?? 0;
+  const quietFrames = frame?.quietFrames ?? result?.quietFrames ?? 0;
 
-  statusEl.textContent = result ? `${result.terminalState}${result.success ? " pass" : " fail"}` : "Load run.json";
-  goalEl.textContent = frame ? `Frame ${frame.frame} / ${result?.terminalFrame ?? totalFrames}` : "No trace loaded";
-  strokeCountEl.textContent = result ? `${result.strokeCount} / ${traceBundle?.level.limits.maxStrokes ?? 0}` : "0 / 0";
+  modeEyebrowEl.textContent = "Trace replay";
+  traceRunEl.textContent = traceBundle ? traceBundle.level.id : "No run loaded";
+  traceResultEl.textContent = result ? `${result.terminalState}${result.success ? " pass" : " fail"}` : "Waiting";
+  traceFrameEl.textContent = result ? `${currentFrame} / ${result.terminalFrame}` : `0 / ${totalFrames}`;
+  traceQuietEl.textContent = `${quietFrames} frames`;
   levelTitleEl.textContent = traceBundle ? traceBundle.level.instruction : "Trace viewer";
   levelCopyEl.textContent = result
     ? `Terminal frame ${result.terminalFrame}. Quiet frames ${result.quietFrames}.`
-    : "Upload a benchmark run bundle to scrub the recorded physics frames.";
+    : "Upload a run from the project runs folder to inspect recorded frames.";
   tracePlayButton.textContent = tracePlaying ? "Pause" : "Play";
   tracePhysicsButton.textContent = showPhysicsBodies ? "Show visual" : "Show physics";
   traceScrubber.max = String(Math.max(0, totalFrames - 1));
@@ -650,6 +662,8 @@ function setMode(nextMode: "play" | "trace"): void {
   mode = nextMode;
   playModeButton.classList.toggle("active", mode === "play");
   traceModeButton.classList.toggle("active", mode === "trace");
+  playStats.hidden = mode !== "play";
+  traceStats.hidden = mode !== "trace";
   playControls.hidden = mode !== "play";
   traceControls.hidden = mode !== "trace";
   strokeExport.hidden = mode !== "play";

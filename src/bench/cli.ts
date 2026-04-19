@@ -1,4 +1,5 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, extname, join } from "node:path";
 import { levels } from "../sim/level";
 import { createRunBundle, runBenchmark } from "./runner";
 import { parseCandidateFile } from "./validation";
@@ -7,6 +8,7 @@ import type { BenchmarkResult } from "./types";
 type CliOptions = {
   actionFile: string;
   bundleFile: string | null;
+  runsDir: string;
   traceFile: string | null;
   frameBudget: number | null;
 };
@@ -16,22 +18,24 @@ async function main(): Promise<void> {
   const raw = JSON.parse(await readFile(options.actionFile, "utf8")) as unknown;
   const candidates = parseCandidateFile(raw, levels);
 
-  if (options.bundleFile) {
-    if (candidates.length !== 1) {
-      throw new Error("--bundle supports one candidate action at a time.");
-    }
+  if (options.bundleFile && candidates.length !== 1) {
+    throw new Error("--bundle supports one candidate action at a time.");
   }
 
-  const bundle = options.bundleFile
-    ? createRunBundle(candidates[0], {
+  const bundledRuns = await Promise.all(
+    candidates.map(async (candidate) => {
+      const bundle = createRunBundle(candidate, {
         stopping: {
           frameBudget: options.frameBudget ?? undefined,
         },
-      })
-    : null;
+      });
+      const runPath = await writeRunBundle(bundle, options.runsDir, options.actionFile);
+      return { bundle, runPath };
+    }),
+  );
 
-  if (options.bundleFile && bundle) {
-    await writeFile(options.bundleFile, JSON.stringify(bundle, null, 2));
+  if (options.bundleFile) {
+    await writeFile(options.bundleFile, JSON.stringify(bundledRuns[0].bundle, null, 2));
   }
 
   const results = candidates.map((candidate) =>
@@ -47,20 +51,24 @@ async function main(): Promise<void> {
     await writeFile(
       options.traceFile,
       JSON.stringify(
-        bundle ? bundle.trace : results.map((result) => result.trace),
+        bundledRuns.length === 1 ? bundledRuns[0].bundle.trace : bundledRuns.map((run) => run.bundle.trace),
         null,
         2,
       ),
     );
   }
 
-  const output = results.map(stripTrace);
+  const output = results.map((result, index) => ({
+    ...stripTrace(result),
+    runPath: bundledRuns[index].runPath,
+  }));
   process.stdout.write(`${JSON.stringify(output.length === 1 ? output[0] : output, null, 2)}\n`);
 }
 
 function parseArgs(args: string[]): CliOptions {
   let actionFile = "";
   let bundleFile: string | null = null;
+  let runsDir = "runs";
   let traceFile: string | null = null;
   let frameBudget: number | null = null;
 
@@ -68,6 +76,9 @@ function parseArgs(args: string[]): CliOptions {
     const arg = args[index];
     if (arg === "--bundle") {
       bundleFile = requireArgValue(args, index, "--bundle");
+      index += 1;
+    } else if (arg === "--runs-dir") {
+      runsDir = requireArgValue(args, index, "--runs-dir");
       index += 1;
     } else if (arg === "--trace") {
       traceFile = requireArgValue(args, index, "--trace");
@@ -80,7 +91,7 @@ function parseArgs(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
       process.stdout.write(
-        "Usage: pnpm bench <action-file.json> [--bundle run.json] [--trace trace.json] [--max-frames 900]\n",
+        "Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 900]\n",
       );
       process.exit(0);
     } else if (!actionFile) {
@@ -91,10 +102,12 @@ function parseArgs(args: string[]): CliOptions {
   }
 
   if (!actionFile) {
-    throw new Error("Missing action file. Usage: pnpm bench <action-file.json> [--bundle run.json] [--trace trace.json] [--max-frames 900]");
+    throw new Error(
+      "Missing action file. Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 900]",
+    );
   }
 
-  return { actionFile, bundleFile, traceFile, frameBudget };
+  return { actionFile, bundleFile, runsDir, traceFile, frameBudget };
 }
 
 function requireArgValue(args: string[], index: number, name: string): string {
@@ -109,6 +122,35 @@ function stripTrace(result: BenchmarkResult): Omit<BenchmarkResult, "trace"> {
   const withoutTrace = { ...result };
   delete withoutTrace.trace;
   return withoutTrace;
+}
+
+async function writeRunBundle(
+  bundle: ReturnType<typeof createRunBundle>,
+  runsDir: string,
+  actionFile: string,
+): Promise<string> {
+  const runId = createRunId(actionFile);
+  const runDir = join(process.cwd(), runsDir, bundle.level.id, runId);
+  await mkdir(runDir, { recursive: true });
+  const runPath = join(runDir, "run.json");
+  await writeFile(runPath, JSON.stringify(bundle, null, 2));
+  return runPath;
+}
+
+function createRunId(actionFile: string): string {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const extension = extname(actionFile);
+  const actionName = basename(actionFile, extension);
+  return `${timestamp}-${slugify(actionName)}`;
+}
+
+function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "action"
+  );
 }
 
 main().catch((error: unknown) => {

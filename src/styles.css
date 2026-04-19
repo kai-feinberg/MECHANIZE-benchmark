@@ -16,6 +16,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   min-width: 320px;
@@ -165,7 +169,7 @@ select {
   gap: 10px;
 }
 
-.button-row button:last-child {
+#play-controls button:last-child {
   grid-column: 1 / -1;
 }
 
