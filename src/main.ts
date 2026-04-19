@@ -150,6 +150,8 @@ function finishStroke(event: PointerEvent): void {
   };
   committedStrokeBody = sim.addStroke(committedStroke);
   if (committedStrokeBody) {
+    playFrame = 0;
+    accumulator = 0;
     playStopping.markStrokeAdded(playFrame);
   }
   committedStrokeLocalPoints = committedStrokeBody ? toLocalPoints(prepareStrokePoints(committedStroke.points), committedStrokeBody) : [];
@@ -203,7 +205,7 @@ function gameLoop(now: number): void {
   const elapsed = Math.min(100, now - lastFrameTime);
   lastFrameTime = now;
 
-  if (mode === "play" && running && !playTerminalState) {
+  if (mode === "play" && running && committedStrokeBody && !playTerminalState) {
     accumulator += elapsed;
     while (accumulator >= 1000 / 60) {
       sim.step();
@@ -544,14 +546,14 @@ function updateUi(): void {
   modeEyebrowEl.textContent = "Playable V1";
   if (playTerminalState) {
     statusEl.textContent = playTerminalState === "success" ? "Success" : playTerminalState;
+  } else if (!committedStrokeBody) {
+    statusEl.textContent = drawing ? "Drawing" : "Draw one stroke";
   } else if (!running) {
     statusEl.textContent = "Paused";
   } else if (sim.level.goal.type === "hit-left-wall") {
     statusEl.textContent = sim.goal.leftWallContact ? "Wall contact" : "Get to the left wall";
   } else if (committedStroke) {
     statusEl.textContent = `Off ground ${sim.goal.consecutiveOffGroundFrames} / ${sim.goal.requiredOffGroundFrames}`;
-  } else {
-    statusEl.textContent = "Draw one stroke";
   }
 
   goalEl.textContent =
@@ -563,7 +565,7 @@ function updateUi(): void {
     sim.level.goal.type === "hit-left-wall"
       ? "Draw a falling stroke to nudge the ball into the target wall."
       : "Draw one heavy stroke. Release to let it fall, push, tip, or wedge the ball upward.";
-  toggleRunButton.textContent = running ? "Pause" : "Run";
+  toggleRunButton.textContent = running ? (committedStrokeBody ? "Pause" : "Armed") : "Run";
   togglePhysicsButton.textContent = showPhysicsBodies ? "Show visual" : "Show physics";
   strokeCountEl.textContent = `${committedStroke ? 1 : 0} / ${sim.level.limits.maxStrokes}`;
   strokeJsonEl.value = committedStroke
