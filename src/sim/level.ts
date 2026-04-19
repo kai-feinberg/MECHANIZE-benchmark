@@ -19,8 +19,8 @@ export const liftBallLevel: LevelDefinition = {
     height: 60,
   },
   goal: {
-    liftBy: 150,
-    holdSteps: 30,
+    offGroundFrames: 150,
+    groundClearance: 3,
   },
   limits: {
     maxStrokes: 1,

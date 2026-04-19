@@ -28,8 +28,8 @@ export type LevelDefinition = {
     height: number;
   };
   goal: {
-    liftBy: number;
-    holdSteps: number;
+    offGroundFrames: number;
+    groundClearance: number;
   };
   limits: {
     maxStrokes: number;
@@ -38,10 +38,9 @@ export type LevelDefinition = {
 
 export type GoalState = {
   achieved: boolean;
-  holdSteps: number;
-  requiredHoldSteps: number;
-  lift: number;
-  requiredLift: number;
+  consecutiveOffGroundFrames: number;
+  requiredOffGroundFrames: number;
+  groundClearance: number;
 };
 
 export type SimulationBodies = {

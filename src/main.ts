@@ -25,7 +25,6 @@ let committedStrokeLocalPoints: Vec2[] = [];
 let showPhysicsBodies = false;
 let lastFrameTime = performance.now();
 let accumulator = 0;
-let canvasRect = canvas.getBoundingClientRect();
 
 const strokeWidth = 28;
 
@@ -55,12 +54,12 @@ function resizeCanvas(): void {
   canvas.height = Math.round(cssHeight * dpr);
   pointerScale.x = canvas.width / sim.level.world.width;
   pointerScale.y = canvas.height / sim.level.world.height;
-  canvasRect = canvas.getBoundingClientRect();
 }
 
 function screenToWorld(event: PointerEvent): Vec2 {
-  const x = ((event.clientX - canvasRect.left) / canvasRect.width) * sim.level.world.width;
-  const y = ((event.clientY - canvasRect.top) / canvasRect.height) * sim.level.world.height;
+  const rect = canvas.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * sim.level.world.width;
+  const y = ((event.clientY - rect.top) / rect.height) * sim.level.world.height;
   return {
     x: clamp(x, 0, sim.level.world.width),
     y: clamp(y, 0, sim.level.world.height),
@@ -153,7 +152,6 @@ function render(): void {
   context.scale(pointerScale.x, pointerScale.y);
   drawBoard();
   drawInstruction();
-  drawGoalGuide();
 
   for (const body of Composite.allBodies(sim.engine.world)) {
     if (body.label === "left-wall" || body.label === "right-wall" || body.label === "ceiling") {
@@ -216,23 +214,6 @@ function drawInstruction(): void {
   context.textAlign = "center";
   context.textBaseline = "top";
   context.fillText(sim.level.instruction, sim.level.world.width / 2, 94);
-  context.restore();
-}
-
-function drawGoalGuide(): void {
-  const y = sim.level.ball.position.y - sim.level.goal.liftBy;
-  context.save();
-  context.setLineDash([12, 14]);
-  context.strokeStyle = "rgba(244, 189, 55, 0.55)";
-  context.lineWidth = 3;
-  context.beginPath();
-  context.moveTo(120, y);
-  context.lineTo(sim.level.world.width - 120, y);
-  context.stroke();
-  context.fillStyle = "rgba(244, 189, 55, 0.85)";
-  context.font = "18px Inter, Arial, sans-serif";
-  context.textAlign = "right";
-  context.fillText("hold above this line", sim.level.world.width - 124, y - 12);
   context.restore();
 }
 
@@ -342,18 +323,17 @@ function drawSuccess(): void {
   context.textAlign = "center";
   context.fillText("Success", 500, 322);
   context.font = "18px Inter, Arial, sans-serif";
-  context.fillText("The ball held above the goal line.", 500, 352);
+  context.fillText("The ball stayed off the ground.", 500, 352);
   context.restore();
 }
 
 function updateUi(): void {
-  const lift = Math.max(0, sim.goal.lift);
   if (sim.goal.achieved) {
     statusEl.textContent = "Success";
   } else if (!running) {
     statusEl.textContent = "Paused";
   } else if (committedStroke) {
-    statusEl.textContent = `Lift ${lift.toFixed(0)} / ${sim.goal.requiredLift}`;
+    statusEl.textContent = `Off ground ${sim.goal.consecutiveOffGroundFrames} / ${sim.goal.requiredOffGroundFrames}`;
   } else {
     statusEl.textContent = "Draw one stroke";
   }

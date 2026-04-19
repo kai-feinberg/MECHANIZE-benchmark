@@ -12,7 +12,7 @@ export function createSimulation(level: LevelDefinition = liftBallLevel): GameSi
 
   const step = (): GoalState => {
     Engine.update(engine, FIXED_TIMESTEP_MS);
-    goal = evaluateGoal(level, bodies.ball, goal.holdSteps);
+    goal = evaluateGoal(level, bodies.ball, goal.consecutiveOffGroundFrames);
     return goal;
   };
 
@@ -56,17 +56,18 @@ export function createSimulation(level: LevelDefinition = liftBallLevel): GameSi
   };
 }
 
-export function evaluateGoal(level: LevelDefinition, ball: Body, priorHoldSteps: number): GoalState {
-  const lift = level.ball.position.y - ball.position.y;
-  const isHighEnough = lift >= level.goal.liftBy;
-  const holdSteps = isHighEnough ? priorHoldSteps + 1 : 0;
+export function evaluateGoal(level: LevelDefinition, ball: Body, priorOffGroundFrames: number): GoalState {
+  const floorTop = level.floor.y - level.floor.height / 2;
+  const ballBottom = ball.position.y + level.ball.radius;
+  const groundClearance = floorTop - ballBottom;
+  const isOffGround = groundClearance >= level.goal.groundClearance;
+  const consecutiveOffGroundFrames = isOffGround ? priorOffGroundFrames + 1 : 0;
 
   return {
-    achieved: holdSteps >= level.goal.holdSteps,
-    holdSteps,
-    requiredHoldSteps: level.goal.holdSteps,
-    lift,
-    requiredLift: level.goal.liftBy,
+    achieved: consecutiveOffGroundFrames >= level.goal.offGroundFrames,
+    consecutiveOffGroundFrames,
+    requiredOffGroundFrames: level.goal.offGroundFrames,
+    groundClearance,
   };
 }
 
@@ -129,9 +130,8 @@ function createLevelBodies(level: LevelDefinition): SimulationBodies {
 function createInitialGoal(level: LevelDefinition): GoalState {
   return {
     achieved: false,
-    holdSteps: 0,
-    requiredHoldSteps: level.goal.holdSteps,
-    lift: 0,
-    requiredLift: level.goal.liftBy,
+    consecutiveOffGroundFrames: 0,
+    requiredOffGroundFrames: level.goal.offGroundFrames,
+    groundClearance: 0,
   };
 }

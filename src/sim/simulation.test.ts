@@ -8,7 +8,7 @@ describe("game simulation", () => {
     const sim = createSimulation();
 
     expect(sim.level.world).toEqual({ width: 1000, height: 700 });
-    expect(sim.level.goal).toEqual({ liftBy: 150, holdSteps: 30 });
+    expect(sim.level.goal).toEqual({ offGroundFrames: 150, groundClearance: 3 });
     expect(sim.bodies.ball.label).toBe("ball");
     expect(sim.bodies.floor.isStatic).toBe(true);
     expect(sim.goal.achieved).toBe(false);
@@ -26,21 +26,22 @@ describe("game simulation", () => {
     expect(sim.bodies.ball.position.y).not.toBe(startY);
   });
 
-  it("requires the ball to hold above the lift threshold", () => {
+  it("requires the ball to stay off the ground for consecutive frames", () => {
     const sim = createSimulation();
     let goal = sim.goal;
+    const floorTop = sim.level.floor.y - sim.level.floor.height / 2;
 
     Body.setPosition(sim.bodies.ball, {
       x: sim.level.ball.position.x,
-      y: sim.level.ball.position.y - sim.level.goal.liftBy,
+      y: floorTop - sim.level.ball.radius - sim.level.goal.groundClearance,
     });
 
-    for (let index = 0; index < sim.level.goal.holdSteps - 1; index += 1) {
-      goal = evaluateGoal(sim.level, sim.bodies.ball, goal.holdSteps);
+    for (let index = 0; index < sim.level.goal.offGroundFrames - 1; index += 1) {
+      goal = evaluateGoal(sim.level, sim.bodies.ball, goal.consecutiveOffGroundFrames);
       expect(goal.achieved).toBe(false);
     }
 
-    goal = evaluateGoal(sim.level, sim.bodies.ball, goal.holdSteps);
+    goal = evaluateGoal(sim.level, sim.bodies.ball, goal.consecutiveOffGroundFrames);
     expect(goal.achieved).toBe(true);
   });
 
@@ -85,7 +86,7 @@ describe("game simulation", () => {
   });
 });
 
-function runReplay(stroke: StrokeAction): { x: number; y: number; achieved: boolean; holdSteps: number } {
+function runReplay(stroke: StrokeAction): { x: number; y: number; achieved: boolean; consecutiveOffGroundFrames: number } {
   const sim = createSimulation();
   sim.addStroke(stroke);
 
@@ -97,6 +98,6 @@ function runReplay(stroke: StrokeAction): { x: number; y: number; achieved: bool
     x: Math.round(sim.bodies.ball.position.x * 1000) / 1000,
     y: Math.round(sim.bodies.ball.position.y * 1000) / 1000,
     achieved: sim.goal.achieved,
-    holdSteps: sim.goal.holdSteps,
+    consecutiveOffGroundFrames: sim.goal.consecutiveOffGroundFrames,
   };
 }
