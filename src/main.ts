@@ -15,6 +15,7 @@ const clearStrokeButton = requireElement<HTMLButtonElement>("#clear-stroke");
 const context = requireCanvasContext(canvas);
 
 const sim = createSimulation();
+const pointerScale = { x: 1, y: 1 };
 let running = true;
 let drawing = false;
 let activeStroke: Vec2[] = [];
@@ -52,6 +53,8 @@ function resizeCanvas(): void {
   canvas.style.height = `${cssHeight}px`;
   canvas.width = Math.round(cssWidth * dpr);
   canvas.height = Math.round(cssHeight * dpr);
+  pointerScale.x = canvas.width / sim.level.world.width;
+  pointerScale.y = canvas.height / sim.level.world.height;
   canvasRect = canvas.getBoundingClientRect();
 }
 
@@ -146,9 +149,8 @@ function gameLoop(now: number): void {
 }
 
 function render(): void {
-  const scale = canvas.width / sim.level.world.width;
   context.save();
-  context.scale(scale, scale);
+  context.scale(pointerScale.x, pointerScale.y);
   drawBoard();
   drawInstruction();
   drawGoalGuide();
@@ -391,6 +393,21 @@ function requireCanvasContext(target: HTMLCanvasElement): CanvasRenderingContext
   return canvasContext;
 }
 
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key.toLowerCase() !== "r" || isTextInput(event.target)) {
+    return;
+  }
+  event.preventDefault();
+  resetLevel();
+}
+
+function isTextInput(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable;
+}
+
 function toLocalPoints(points: Vec2[], body: Body): Vec2[] {
   return points.map((point) => {
     const dx = point.x - body.position.x;
@@ -414,6 +431,7 @@ function toWorldPoint(point: Vec2, body: Body): Vec2 {
 }
 
 window.addEventListener("resize", resizeCanvas);
+window.addEventListener("keydown", handleKeydown);
 canvas.addEventListener("pointerdown", beginStroke);
 canvas.addEventListener("pointermove", extendStroke);
 canvas.addEventListener("pointerup", finishStroke);
