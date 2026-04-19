@@ -1,5 +1,8 @@
-import { Body, Bodies, Vector } from "matter-js";
+import Matter from "matter-js";
+import type { Body as MatterBody } from "matter-js";
 import type { StrokeAction, Vec2 } from "./types";
+
+const { Bodies, Vector } = Matter;
 
 const MIN_POINT_DISTANCE = 28;
 const RESAMPLE_DISTANCE = 96;
@@ -36,14 +39,14 @@ export function measureStrokeLength(points: Vec2[]): number {
   }, 0);
 }
 
-export function createStrokeBody(stroke: StrokeAction): Body | null {
+export function createStrokeBody(stroke: StrokeAction): MatterBody | null {
   const points = prepareStrokePoints(stroke.points);
   if (points.length < 2 || measureStrokeLength(points) < MIN_SEGMENT_LENGTH) {
     return null;
   }
 
   const width = Math.max(8, stroke.width);
-  const parts: Body[] = [];
+  const parts: MatterBody[] = [];
 
   for (let index = 1; index < points.length; index += 1) {
     const start = points[index - 1];
@@ -90,7 +93,7 @@ export function createStrokeBody(stroke: StrokeAction): Body | null {
     return null;
   }
 
-  return Body.create({
+  return Matter.Body.create({
     label: `stroke:${stroke.id}`,
     parts,
     density: 0.0028,

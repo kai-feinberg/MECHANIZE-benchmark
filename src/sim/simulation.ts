@@ -1,7 +1,10 @@
-import { Bodies, Body, Composite, Engine } from "matter-js";
+import Matter from "matter-js";
+import type { Body as MatterBody, Engine as MatterEngine } from "matter-js";
 import { FIXED_TIMESTEP_MS, liftBallLevel } from "./level";
 import { createStrokeBody } from "./strokeBody";
 import type { GameSimulation, GoalState, LevelDefinition, StrokeAction, SimulationBodies } from "./types";
+
+const { Bodies, Composite, Engine } = Matter;
 
 export function createSimulation(level: LevelDefinition = liftBallLevel): GameSimulation {
   let engine = createEngine();
@@ -16,7 +19,7 @@ export function createSimulation(level: LevelDefinition = liftBallLevel): GameSi
     return goal;
   };
 
-  const addStroke = (stroke: StrokeAction): Body | null => {
+  const addStroke = (stroke: StrokeAction): MatterBody | null => {
     if (bodies.strokes.length >= level.limits.maxStrokes) {
       return null;
     }
@@ -56,7 +59,7 @@ export function createSimulation(level: LevelDefinition = liftBallLevel): GameSi
   };
 }
 
-export function evaluateGoal(level: LevelDefinition, ball: Body, priorGoal: GoalState): GoalState {
+export function evaluateGoal(level: LevelDefinition, ball: MatterBody, priorGoal: GoalState): GoalState {
   const floorTop = level.floor.y - level.floor.height / 2;
   const ballBottom = ball.position.y + level.ball.radius;
   const groundClearance = floorTop - ballBottom;
@@ -78,7 +81,7 @@ export function evaluateGoal(level: LevelDefinition, ball: Body, priorGoal: Goal
   };
 }
 
-function createEngine(): Engine {
+function createEngine(): MatterEngine {
   const engine = Engine.create({
     enableSleeping: false,
   });
@@ -150,7 +153,7 @@ function createInitialGoal(level: LevelDefinition): GoalState {
   };
 }
 
-function addLevelBodies(engine: Engine, bodies: SimulationBodies): void {
+function addLevelBodies(engine: MatterEngine, bodies: SimulationBodies): void {
   Composite.add(engine.world, [
     bodies.floor,
     bodies.leftWall,
@@ -161,12 +164,12 @@ function addLevelBodies(engine: Engine, bodies: SimulationBodies): void {
   ]);
 }
 
-function createCupBodies(level: LevelDefinition): Body[] {
+function createCupBodies(level: LevelDefinition): MatterBody[] {
   if (!level.cup) {
     return [];
   }
 
-  const parts: Body[] = [];
+  const parts: MatterBody[] = [];
   const startAngle = Math.PI * 0.16;
   const endAngle = Math.PI * 0.84;
   const step = (endAngle - startAngle) / (level.cup.segments - 1);
@@ -192,7 +195,7 @@ function createCupBodies(level: LevelDefinition): Body[] {
   }
 
   return [
-    Body.create({
+    Matter.Body.create({
       label: "cup",
       parts,
       density: 0.0011,

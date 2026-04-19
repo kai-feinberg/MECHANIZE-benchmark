@@ -1,4 +1,4 @@
-import type { Body, Engine } from "matter-js";
+import type { Body as MatterBody, Engine as MatterEngine } from "matter-js";
 
 export type Vec2 = {
   x: number;
@@ -64,21 +64,54 @@ export type GoalState = {
 };
 
 export type SimulationBodies = {
-  ball: Body;
-  floor: Body;
-  leftWall: Body;
-  rightWall: Body;
-  ceiling: Body;
-  statics: Body[];
-  strokes: Body[];
+  ball: MatterBody;
+  floor: MatterBody;
+  leftWall: MatterBody;
+  rightWall: MatterBody;
+  ceiling: MatterBody;
+  statics: MatterBody[];
+  strokes: MatterBody[];
 };
 
 export type GameSimulation = {
-  engine: Engine;
+  engine: MatterEngine;
   level: LevelDefinition;
   bodies: SimulationBodies;
   goal: GoalState;
   step: () => GoalState;
-  addStroke: (stroke: StrokeAction) => Body | null;
+  addStroke: (stroke: StrokeAction) => MatterBody | null;
   reset: () => void;
+};
+
+export type TerminalState = "success" | "stalled" | "timeout";
+
+export type MovementThresholds = {
+  linearSpeed: number;
+  angularSpeed: number;
+  positionDelta: number;
+  angleDelta: number;
+};
+
+export type StoppingCriteriaConfig = {
+  frameBudget: number;
+  rollingWindowFrames: number;
+  quietFrames: number;
+  graceFrames: number;
+  thresholds: MovementThresholds;
+};
+
+export type BodyMovementSummary = {
+  label: string;
+  linearSpeed: number;
+  angularSpeed: number;
+  positionDelta: number;
+  angleDelta: number;
+  moving: boolean;
+};
+
+export type StoppingState = {
+  frame: number;
+  quietFrames: number;
+  terminalState: TerminalState | null;
+  movement: BodyMovementSummary[];
 };

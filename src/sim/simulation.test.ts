@@ -1,4 +1,4 @@
-import { Body } from "matter-js";
+import Matter from "matter-js";
 import { describe, expect, it } from "vitest";
 import { hitLeftWallLevel } from "./level";
 import { createSimulation, evaluateGoal } from "./simulation";
@@ -37,7 +37,7 @@ describe("game simulation", () => {
       throw new Error("Expected off-ground goal.");
     }
 
-    Body.setPosition(sim.bodies.ball, {
+    Matter.Body.setPosition(sim.bodies.ball, {
       x: sim.level.ball.position.x,
       y: floorTop - sim.level.ball.radius - sim.level.goal.groundClearance,
     });
@@ -58,7 +58,7 @@ describe("game simulation", () => {
     expect(sim.bodies.ball.circleRadius).toBe(26);
     expect(sim.bodies.statics.length).toBeGreaterThan(0);
 
-    Body.setPosition(sim.bodies.ball, {
+    Matter.Body.setPosition(sim.bodies.ball, {
       x: sim.level.ball.radius,
       y: sim.bodies.ball.position.y,
     });

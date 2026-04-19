@@ -1,9 +1,12 @@
-import { Body, Composite } from "matter-js";
+import Matter from "matter-js";
+import type { Body as MatterBody } from "matter-js";
 import "./styles.css";
 import { levels } from "./sim/level";
 import { createSimulation } from "./sim/simulation";
 import { measureStrokeLength, prepareStrokePoints } from "./sim/strokeBody";
 import type { StrokeAction, Vec2 } from "./sim/types";
+
+const { Composite } = Matter;
 
 const canvas = requireElement<HTMLCanvasElement>("#game");
 const levelTitleEl = requireElement<HTMLElement>("#level-title");
@@ -25,7 +28,7 @@ let running = true;
 let drawing = false;
 let activeStroke: Vec2[] = [];
 let committedStroke: StrokeAction | null = null;
-let committedStrokeBody: Body | null = null;
+let committedStrokeBody: MatterBody | null = null;
 let committedStrokeLocalPoints: Vec2[] = [];
 let showPhysicsBodies = false;
 let lastFrameTime = performance.now();
@@ -235,7 +238,7 @@ function drawInstruction(): void {
   context.restore();
 }
 
-function drawBody(body: Body): void {
+function drawBody(body: MatterBody): void {
   const parts = body.parts.length > 1 ? body.parts.slice(1) : body.parts;
   for (const part of parts) {
     context.beginPath();
@@ -257,7 +260,7 @@ function drawBody(body: Body): void {
   }
 }
 
-function getBodyFill(body: Body): string {
+function getBodyFill(body: MatterBody): string {
   if (body.label === "ball") {
     return "#f4bd37";
   }
@@ -276,7 +279,7 @@ function getBodyFill(body: Body): string {
   return "#fbfbf5";
 }
 
-function getBodyStroke(body: Body): string {
+function getBodyStroke(body: MatterBody): string {
   if (body.label.startsWith("stroke:") && showPhysicsBodies) {
     return "#e94666";
   }
@@ -304,7 +307,7 @@ function drawStrokePreview(points: Vec2[]): void {
   context.restore();
 }
 
-function drawCommittedStroke(body: Body, localPoints: Vec2[]): void {
+function drawCommittedStroke(body: MatterBody, localPoints: Vec2[]): void {
   const points = localPoints.map((point) => toWorldPoint(point, body));
   drawRoundPath(points, strokeWidth, "#fbfbf5", "#171b24");
 }
@@ -426,7 +429,7 @@ function isTextInput(target: EventTarget | null): boolean {
   return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable;
 }
 
-function toLocalPoints(points: Vec2[], body: Body): Vec2[] {
+function toLocalPoints(points: Vec2[], body: MatterBody): Vec2[] {
   return points.map((point) => {
     const dx = point.x - body.position.x;
     const dy = point.y - body.position.y;
@@ -439,7 +442,7 @@ function toLocalPoints(points: Vec2[], body: Body): Vec2[] {
   });
 }
 
-function toWorldPoint(point: Vec2, body: Body): Vec2 {
+function toWorldPoint(point: Vec2, body: MatterBody): Vec2 {
   const cos = Math.cos(body.angle);
   const sin = Math.sin(body.angle);
   return {

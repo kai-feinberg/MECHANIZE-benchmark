@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "bench": "tsx src/bench/cli.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,6 +16,8 @@
   },
   "devDependencies": {
     "@types/matter-js": "^0.19.8",
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vitest": "^4.0.15"
