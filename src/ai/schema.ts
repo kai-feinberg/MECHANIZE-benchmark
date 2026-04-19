@@ -1,9 +1,7 @@
 import type { LevelDefinition } from "../sim/types";
 import type { CandidateAction } from "../bench/types";
-import { parseCandidateFile } from "../bench/validation";
+import { MAX_STROKE_WIDTH, MIN_STROKE_WIDTH, parseCandidateFile } from "../bench/validation";
 
-export const MIN_STROKE_WIDTH = 1;
-export const MAX_STROKE_WIDTH = 80;
 export const MIN_POINTS_PER_STROKE = 2;
 export const MAX_POINTS_PER_STROKE = 160;
 

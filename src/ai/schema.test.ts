@@ -22,7 +22,7 @@ describe("AI candidate schema", () => {
     expect(reasoning).toMatchObject({ type: "string", maxLength: 1200 });
     expect(strokes.maxItems).toBe(1);
     expect(strokes.items.additionalProperties).toBe(false);
-    expect(strokes.items.properties.width).toMatchObject({ minimum: 1, maximum: 80 });
+    expect(strokes.items.properties.width).toMatchObject({ minimum: 1, maximum: 18 });
     expect(strokes.items.properties.points.maxItems).toBe(160);
     expect(strokes.items.properties.points.items.properties.x.maximum).toBe(1000);
     expect(strokes.items.properties.points.items.properties.y.maximum).toBe(700);
@@ -36,7 +36,7 @@ describe("AI candidate schema", () => {
         strokes: [
           {
             id: "ai-stroke-1",
-            width: 40,
+            width: 18,
             points: [
               { x: 720, y: 360 },
               { x: 900, y: 560 },

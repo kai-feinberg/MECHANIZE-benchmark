@@ -14,7 +14,7 @@
     "strokes": [
       {
         "id": "attempt-001-pusher",
-        "width": 40,
+        "width": 18,
         "points": [
           { "x": 720, "y": 360 },
           { "x": 900, "y": 560 }
@@ -34,7 +34,7 @@
     },
     "strokeCount": 1,
     "strokeLength": 269.07,
-    "frameBudget": 900
+    "frameBudget": 600
   },
   "trace": {
     "levelId": "ground-left-wall-v1",

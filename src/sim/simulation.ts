@@ -2,9 +2,13 @@ import Matter from "matter-js";
 import type { Body as MatterBody, Engine as MatterEngine } from "matter-js";
 import { FIXED_TIMESTEP_MS, groundLeftWallLevel } from "./level";
 import { createStrokeBody } from "./strokeBody";
-import type { GameSimulation, GoalState, LevelDefinition, StrokeAction, SimulationBodies } from "./types";
+import type { GameSimulation, GoalState, LevelDefinition, SimulationBodies, StrokeAction, Vec2 } from "./types";
 
-const { Bodies, Composite, Engine } = Matter;
+const { Bodies, Body, Composite, Engine, Query } = Matter;
+
+const STROKE_NUDGE_STEP = 8;
+const STROKE_NUDGE_MAX_DISTANCE = 240;
+const SIGNIFICANT_TERRAIN_OVERLAP_DEPTH = 12;
 
 export function createSimulation(level: LevelDefinition = groundLeftWallLevel): GameSimulation {
   let engine = createEngine();
@@ -26,6 +30,18 @@ export function createSimulation(level: LevelDefinition = groundLeftWallLevel): 
 
     const body = createStrokeBody(stroke);
     if (!body) {
+      return null;
+    }
+
+    if (hasSignificantTerrainOverlap(body, getStrokeTerrainBlockers(bodies))) {
+      return null;
+    }
+
+    if (!nudgeStrokeOutOfExistingBodies(body, getStrokePlacementBlockers(bodies), level)) {
+      return null;
+    }
+
+    if (hasSignificantTerrainOverlap(body, getStrokeTerrainBlockers(bodies))) {
       return null;
     }
 
@@ -162,6 +178,115 @@ function addLevelBodies(engine: MatterEngine, bodies: SimulationBodies): void {
     ...bodies.statics,
     bodies.ball,
   ]);
+}
+
+function getStrokePlacementBlockers(bodies: SimulationBodies): MatterBody[] {
+  return [bodies.ball, ...bodies.statics];
+}
+
+function getStrokeTerrainBlockers(bodies: SimulationBodies): MatterBody[] {
+  return [bodies.floor, bodies.leftWall, bodies.rightWall, bodies.ceiling];
+}
+
+function hasSignificantTerrainOverlap(body: MatterBody, blockers: MatterBody[]): boolean {
+  return Query.collides(body, blockers).some((collision) => collision.depth >= SIGNIFICANT_TERRAIN_OVERLAP_DEPTH);
+}
+
+function nudgeStrokeOutOfExistingBodies(body: MatterBody, blockers: MatterBody[], level: LevelDefinition): boolean {
+  if (!overlapsAny(body, blockers)) {
+    return true;
+  }
+
+  const originalPosition = { ...body.position };
+  const directions = getNudgeDirections(body, blockers);
+
+  for (let distance = STROKE_NUDGE_STEP; distance <= STROKE_NUDGE_MAX_DISTANCE; distance += STROKE_NUDGE_STEP) {
+    for (const direction of directions) {
+      Body.setPosition(body, {
+        x: originalPosition.x + direction.x * distance,
+        y: originalPosition.y + direction.y * distance,
+      });
+
+      clampBodyToWorld(body, level);
+      if (!overlapsAny(body, blockers)) {
+        Body.setVelocity(body, { x: 0, y: 0 });
+        Body.setAngularVelocity(body, 0);
+        return true;
+      }
+    }
+  }
+
+  Body.setPosition(body, originalPosition);
+  return false;
+}
+
+function overlapsAny(body: MatterBody, blockers: MatterBody[]): boolean {
+  return Query.collides(body, blockers).length > 0;
+}
+
+function getNudgeDirections(body: MatterBody, blockers: MatterBody[]): Vec2[] {
+  const overlapping = Query.collides(body, blockers).map((collision) => (collision.bodyA === body ? collision.bodyB : collision.bodyA));
+  const center = overlapping.length > 0 ? averageBodyPosition(overlapping) : averageBodyPosition(blockers);
+  const away = normalize({
+    x: body.position.x - center.x,
+    y: body.position.y - center.y,
+  });
+
+  const perpendicular = { x: -away.y, y: away.x };
+  return [
+    away,
+    { x: -away.x, y: -away.y },
+    perpendicular,
+    { x: -perpendicular.x, y: -perpendicular.y },
+    { x: 0, y: -1 },
+    { x: -1, y: 0 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+  ];
+}
+
+function averageBodyPosition(bodies: MatterBody[]): Vec2 {
+  if (bodies.length === 0) {
+    return { x: 0, y: 0 };
+  }
+
+  return {
+    x: bodies.reduce((total, body) => total + body.position.x, 0) / bodies.length,
+    y: bodies.reduce((total, body) => total + body.position.y, 0) / bodies.length,
+  };
+}
+
+function normalize(vector: Vec2): Vec2 {
+  const length = Math.hypot(vector.x, vector.y);
+  if (length < 0.0001) {
+    return { x: 0, y: -1 };
+  }
+
+  return {
+    x: vector.x / length,
+    y: vector.y / length,
+  };
+}
+
+function clampBodyToWorld(body: MatterBody, level: LevelDefinition): void {
+  const offset = {
+    x: getBoundsOffset(body.bounds.min.x, body.bounds.max.x, 0, level.world.width),
+    y: getBoundsOffset(body.bounds.min.y, body.bounds.max.y, 0, level.world.height),
+  };
+
+  if (offset.x !== 0 || offset.y !== 0) {
+    Body.translate(body, offset);
+  }
+}
+
+function getBoundsOffset(min: number, max: number, lower: number, upper: number): number {
+  if (min < lower) {
+    return lower - min;
+  }
+  if (max > upper) {
+    return upper - max;
+  }
+  return 0;
 }
 
 function createCupBodies(level: LevelDefinition): MatterBody[] {

@@ -34,6 +34,10 @@ export function runBenchmark(action: CandidateAction, options: RunBenchmarkOptio
   for (const stroke of action.strokes) {
     if (sim.addStroke(stroke)) {
       stopping.markStrokeAdded(frame);
+    } else {
+      throw new Error(
+        `Stroke ${stroke.id} could not be placed. It may be too short, exceed the stroke limit, overlap the floor or walls too deeply, or remain overlapped with an existing object after nudging.`,
+      );
     }
   }
 

@@ -25,6 +25,53 @@ describe("benchmark runner", () => {
     expect(result.terminalFrame).toBe(5);
   });
 
+  it("uses the default 600 frame timeout when no frame budget is provided", () => {
+    const result = runBenchmark(
+      {
+        levelId: groundLeftWallLevel.id,
+        strokes: [
+          {
+            id: "idle-drop",
+            width: 18,
+            points: [
+              { x: 100, y: 100 },
+              { x: 130, y: 100 },
+            ],
+          },
+        ],
+      },
+      {
+        stopping: {
+          quietFrames: 10_000,
+        },
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.terminalState).toBe("timeout");
+    expect(result.terminalFrame).toBe(600);
+    expect(result.frameBudget).toBe(600);
+  });
+
+  it("caps requested frame budgets at 600 frames", () => {
+    const result = runBenchmark(
+      {
+        levelId: groundLeftWallLevel.id,
+        strokes: [],
+      },
+      {
+        stopping: {
+          frameBudget: 30_000,
+          quietFrames: 10_000,
+        },
+      },
+    );
+
+    expect(result.terminalState).toBe("timeout");
+    expect(result.terminalFrame).toBe(600);
+    expect(result.frameBudget).toBe(600);
+  });
+
   it("reports stalled when all dynamic bodies settle", () => {
     const result = runBenchmark(
       {
@@ -95,6 +142,25 @@ describe("benchmark runner", () => {
           strokes: [
             {
               id: "bad",
+              width: 19,
+              points: [
+                { x: 0, y: 0 },
+                { x: 100, y: 0 },
+              ],
+            },
+          ],
+        },
+        [groundLeftWallLevel],
+      ),
+    ).toThrow(/width must be between 1 and 18/);
+
+    expect(() =>
+      parseCandidateFile(
+        {
+          levelId: groundLeftWallLevel.id,
+          strokes: [
+            {
+              id: "bad",
               width: 18,
               points: [
                 { x: 0, y: 0 },
@@ -106,5 +172,23 @@ describe("benchmark runner", () => {
         [groundLeftWallLevel],
       ),
     ).toThrow(/world bounds/);
+  });
+
+  it("rejects candidate strokes that cannot be placed safely", () => {
+    expect(() =>
+      runBenchmark({
+        levelId: groundLeftWallLevel.id,
+        strokes: [
+          {
+            id: "buried-in-floor",
+            width: 18,
+            points: [
+              { x: 100, y: 670 },
+              { x: 250, y: 670 },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/could not be placed/);
   });
 });

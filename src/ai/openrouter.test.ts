@@ -17,7 +17,7 @@ describe("OpenRouter candidate generation", () => {
                   strokes: [
                     {
                       id: "ai-stroke-1",
-                      width: 40,
+                      width: 18,
                       points: [
                         { x: 720, y: 360 },
                         { x: 900, y: 560 },

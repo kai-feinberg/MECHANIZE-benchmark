@@ -62,7 +62,7 @@ export function buildLevelPrompt(level: LevelDefinition): string {
     "- Include a concise reasoning string explaining the intended physical mechanism.",
     `- Generate exactly this levelId: ${level.id}`,
     `- Maximum strokes: ${level.limits.maxStrokes}`,
-    "- Width must be between 1 and 80.",
+    "- Width must be between 1 and 18, matching the playable browser stroke.",
     "- Each stroke must have 2 to 160 points.",
     "- Every point must stay inside the world bounds.",
     "- Use sparse control points; the engine smooths and resamples the stroke.",

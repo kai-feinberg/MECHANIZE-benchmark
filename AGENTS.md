@@ -69,7 +69,7 @@ Submit a JSON object with a known `levelId` and a `strokes` array:
   "strokes": [
     {
       "id": "attempt-001-pusher",
-      "width": 40,
+      "width": 18,
       "points": [
         { "x": 720, "y": 360 },
         { "x": 900, "y": 560 }
@@ -79,7 +79,9 @@ Submit a JSON object with a known `levelId` and a `strokes` array:
 }
 ```
 
-Current levels allow one stroke. Valid stroke widths are `1` through `80`. Each stroke needs `2` through `160` points. Points are world coordinates inside the `1000 x 700` canvas.
+Current levels allow one stroke. Valid stroke widths are `1` through `18`, matching the playable browser stroke. Each stroke needs `2` through `160` points. Points are world coordinates inside the `1000 x 700` canvas.
+
+If a stroke overlaps the floor, walls, or ceiling by a significant amount, the benchmark rejects the candidate before writing a run bundle. If a stroke overlaps the ball or cup-like level objects, the simulation tries a small bounded nudge first; if it still overlaps, the candidate is rejected.
 
 Do not use unsupported shapes such as boxes, circles, polygons, SVG paths, text, or extra JSON properties. The benchmark accepts only stroke point paths.
 

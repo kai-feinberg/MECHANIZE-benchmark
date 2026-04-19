@@ -91,7 +91,7 @@ function parseArgs(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
       process.stdout.write(
-        "Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 900]\n",
+        "Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 600]\n",
       );
       process.exit(0);
     } else if (!actionFile) {
@@ -103,7 +103,7 @@ function parseArgs(args: string[]): CliOptions {
 
   if (!actionFile) {
     throw new Error(
-      "Missing action file. Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 900]",
+      "Missing action file. Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 600]",
     );
   }
 

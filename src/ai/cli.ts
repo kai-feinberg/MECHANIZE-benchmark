@@ -115,7 +115,7 @@ function parseArgs(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
       process.stdout.write(
-        "Usage: pnpm ai-bench <level-id> [--model openai/gpt-5.4-mini] [--runs-dir runs] [--temperature 0.2] [--timeout-ms 60000] [--seed 1] [--max-frames 900]\n",
+        "Usage: pnpm ai-bench <level-id> [--model openai/gpt-5.4-mini] [--runs-dir runs] [--temperature 0.2] [--timeout-ms 60000] [--seed 1] [--max-frames 600]\n",
       );
       process.exit(0);
     } else if (!levelId) {

@@ -106,7 +106,7 @@ The benchmark runner expects a JSON object with a `levelId` and `strokes` array:
   "strokes": [
     {
       "id": "drop-pusher",
-      "width": 40,
+      "width": 18,
       "points": [
         { "x": 720, "y": 360 },
         { "x": 900, "y": 560 }
@@ -133,9 +133,10 @@ Validation constraints:
 
 - `levelId` must match a known level.
 - `strokes.length` must not exceed the level limit.
-- stroke `width` must be between `1` and `80`.
+- stroke `width` must be between `1` and `18`, matching the playable browser stroke.
 - each stroke must have `2` to `160` points.
 - every point must stay inside the level world bounds.
+- strokes that overlap the floor, walls, or ceiling by a significant amount are rejected instead of simulated.
 
 ## Run A Benchmark
 
@@ -163,7 +164,7 @@ The command prints a JSON result and writes a run bundle:
 Common options:
 
 ```bash
-pnpm bench action.json --max-frames 900
+pnpm bench action.json --max-frames 600
 pnpm bench action.json --runs-dir runs
 pnpm bench action.json --bundle latest-run.json
 pnpm bench action.json --trace trace.json
@@ -231,7 +232,7 @@ Options:
 ```bash
 pnpm ai-bench hit-left-wall-v1 --model openai/gpt-5.4-mini
 pnpm ai-bench ground-left-wall-v1 --temperature 0.2 --seed 1
-pnpm ai-bench ground-left-wall-v1 --timeout-ms 60000 --max-frames 900
+pnpm ai-bench ground-left-wall-v1 --timeout-ms 60000 --max-frames 600
 ```
 
 The default model is `openai/gpt-5.4-mini`. The model-facing prompt describes the coordinate system, level geometry, goal, stroke constraints, valid schema, and invalid examples. Prompt code lives in [`src/ai/prompt.ts`](/Users/kai/Desktop/projects/brain-it-on-benchmark/src/ai/prompt.ts).

@@ -86,6 +86,40 @@ describe("game simulation", () => {
     expect(sim.bodies.ball.position.y).toBeCloseTo(sim.level.ball.position.y);
   });
 
+  it("nudges new strokes away from existing level bodies", () => {
+    const sim = createSimulation(hitLeftWallLevel);
+    const stroke: StrokeAction = {
+      id: "overlapping-ball",
+      width: 18,
+      points: [
+        { x: 590, y: 596 },
+        { x: 630, y: 596 },
+      ],
+    };
+
+    const body = sim.addStroke(stroke);
+
+    expect(body).not.toBeNull();
+    if (!body) {
+      throw new Error("Expected stroke body.");
+    }
+    expect(Matter.Query.collides(body, [sim.bodies.ball, ...sim.bodies.statics])).toHaveLength(0);
+  });
+
+  it("rejects strokes that overlap terrain too deeply", () => {
+    const sim = createSimulation();
+    const stroke: StrokeAction = {
+      id: "buried-in-floor",
+      width: 18,
+      points: [
+        { x: 100, y: 670 },
+        { x: 250, y: 670 },
+      ],
+    };
+
+    expect(sim.addStroke(stroke)).toBeNull();
+  });
+
   it("replays a known stroke consistently in the same runtime", () => {
     const stroke: StrokeAction = {
       id: "replay",

@@ -2,8 +2,8 @@ import type { CandidateAction, CandidateFile } from "./types";
 import type { LevelDefinition, StrokeAction, Vec2 } from "../sim/types";
 
 const MAX_POINTS_PER_STROKE = 160;
-const MAX_STROKE_WIDTH = 80;
-const MIN_STROKE_WIDTH = 1;
+export const MAX_STROKE_WIDTH = 18;
+export const MIN_STROKE_WIDTH = 1;
 
 export function parseCandidateFile(value: unknown, levels: readonly LevelDefinition[]): CandidateAction[] {
   if (isRecord(value) && Array.isArray(value.candidates)) {

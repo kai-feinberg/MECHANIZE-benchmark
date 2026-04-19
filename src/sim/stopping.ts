@@ -18,8 +18,10 @@ type FrameSnapshot = {
   bodies: Map<number, BodySnapshot>;
 };
 
+export const MAX_FRAME_BUDGET = 600;
+
 export const DEFAULT_STOPPING_CRITERIA: StoppingCriteriaConfig = {
-  frameBudget: 900,
+  frameBudget: MAX_FRAME_BUDGET,
   rollingWindowFrames: 30,
   quietFrames: 120,
   graceFrames: 30,
@@ -117,9 +119,12 @@ export type PartialStoppingCriteriaConfig = Partial<
 >;
 
 export function mergeStoppingCriteriaConfig(config: PartialStoppingCriteriaConfig = {}): StoppingCriteriaConfig {
+  const frameBudget = config.frameBudget === undefined ? DEFAULT_STOPPING_CRITERIA.frameBudget : Math.min(config.frameBudget, MAX_FRAME_BUDGET);
+
   return {
     ...DEFAULT_STOPPING_CRITERIA,
     ...config,
+    frameBudget,
     thresholds: {
       ...DEFAULT_STOPPING_CRITERIA.thresholds,
       ...config.thresholds,
