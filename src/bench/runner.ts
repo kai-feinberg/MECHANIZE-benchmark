@@ -14,6 +14,8 @@ export type RunBenchmarkOptions = {
   includeTrace?: boolean;
 };
 
+type RunBundleMetadata = Partial<BenchmarkRunBundle["metadata"]>;
+
 export function runBenchmark(action: CandidateAction, options: RunBenchmarkOptions = {}): BenchmarkResult {
   const availableLevels = options.levels ?? levels;
   const level = availableLevels.find((candidate) => candidate.id === action.levelId);
@@ -89,7 +91,10 @@ export function runBenchmark(action: CandidateAction, options: RunBenchmarkOptio
 
 export { DEFAULT_STOPPING_CRITERIA };
 
-export function createRunBundle(action: CandidateAction, options: Omit<RunBenchmarkOptions, "includeTrace"> = {}): BenchmarkRunBundle {
+export function createRunBundle(
+  action: CandidateAction,
+  options: Omit<RunBenchmarkOptions, "includeTrace"> & { metadata?: RunBundleMetadata } = {},
+): BenchmarkRunBundle {
   const availableLevels = options.levels ?? levels;
   const level = availableLevels.find((candidate) => candidate.id === action.levelId);
   if (!level) {
@@ -113,6 +118,8 @@ export function createRunBundle(action: CandidateAction, options: Omit<RunBenchm
     metadata: {
       createdAt: new Date().toISOString(),
       runner: "brain-it-on-benchmark",
+      source: "manual",
+      ...options.metadata,
     },
   };
 }

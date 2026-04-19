@@ -1,8 +1,8 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, extname, join } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
 import { levels } from "../sim/level";
 import { createRunBundle, runBenchmark } from "./runner";
 import { parseCandidateFile } from "./validation";
+import { writeRunBundle } from "./runFiles";
 import type { BenchmarkResult } from "./types";
 
 type CliOptions = {
@@ -122,35 +122,6 @@ function stripTrace(result: BenchmarkResult): Omit<BenchmarkResult, "trace"> {
   const withoutTrace = { ...result };
   delete withoutTrace.trace;
   return withoutTrace;
-}
-
-async function writeRunBundle(
-  bundle: ReturnType<typeof createRunBundle>,
-  runsDir: string,
-  actionFile: string,
-): Promise<string> {
-  const runId = createRunId(actionFile);
-  const runDir = join(process.cwd(), runsDir, bundle.level.id, runId);
-  await mkdir(runDir, { recursive: true });
-  const runPath = join(runDir, "run.json");
-  await writeFile(runPath, JSON.stringify(bundle, null, 2));
-  return runPath;
-}
-
-function createRunId(actionFile: string): string {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const extension = extname(actionFile);
-  const actionName = basename(actionFile, extension);
-  return `${timestamp}-${slugify(actionName)}`;
-}
-
-function slugify(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "action"
-  );
 }
 
 main().catch((error: unknown) => {

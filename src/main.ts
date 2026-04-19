@@ -26,6 +26,8 @@ const traceRunEl = requireElement<HTMLElement>("#trace-run");
 const traceResultEl = requireElement<HTMLElement>("#trace-result");
 const traceFrameEl = requireElement<HTMLElement>("#trace-frame");
 const traceQuietEl = requireElement<HTMLElement>("#trace-quiet");
+const traceModelEl = requireElement<HTMLElement>("#trace-model");
+const traceReasoningEl = requireElement<HTMLElement>("#trace-reasoning");
 const strokeJsonEl = requireElement<HTMLTextAreaElement>("#stroke-json");
 const toggleRunButton = requireElement<HTMLButtonElement>("#toggle-run");
 const togglePhysicsButton = requireElement<HTMLButtonElement>("#toggle-physics");
@@ -63,6 +65,7 @@ let traceFrameIndex = 0;
 let tracePlaying = false;
 let traceAccumulator = 0;
 let traceStrokeLocalPoints = new Map<string, Vec2[]>();
+let traceBodyLocalVertices = new Map<string, Vec2[][]>();
 let traceLevel: LevelDefinition = sim.level;
 let traceStaticSim = createSimulation(traceLevel);
 
@@ -452,6 +455,8 @@ function renderTrace(): void {
       drawTraceBall(level, body);
     } else if (body.label.startsWith("stroke:")) {
       drawTraceStroke(body, traceStrokeLocalPoints.get(body.label) ?? []);
+    } else if (body.label === "cup") {
+      drawTraceBodyParts(body, traceBodyLocalVertices.get(body.label) ?? [], "#f7f7f1");
     } else if (showPhysicsBodies) {
       drawTraceBox(body, "#fbfbf5");
     }
@@ -507,6 +512,60 @@ function drawTraceStroke(body: BenchmarkTraceFrame["bodies"][number], localPoint
   const points = localPoints.map((point) => toTraceWorldPoint(point, body));
   const stroke = traceBundle?.action.strokes.find((candidate) => `stroke:${candidate.id}` === body.label);
   drawRoundPath(points, stroke?.width ?? strokeWidth, "#fbfbf5", showPhysicsBodies ? "#e94666" : "#171b24");
+  drawTraceStrokeModelLabel(points, formatTraceModelLabel(traceBundle), traceLevel);
+}
+
+function drawTraceStrokeModelLabel(points: Vec2[], label: string, level: LevelDefinition): void {
+  const bounds = getPointBounds(points);
+  const paddingX = 10;
+  const maxWidth = 260;
+  const height = 28;
+
+  context.save();
+  context.font = "13px Inter, Arial, sans-serif";
+  const text = fitCanvasText(label, maxWidth - paddingX * 2);
+  const width = Math.min(maxWidth, Math.ceil(context.measureText(text).width) + paddingX * 2);
+  const x = clamp(bounds.minX, 12, level.world.width - width - 12);
+  const y = clamp(bounds.minY - height - 10, 12, level.world.height - height - 12);
+
+  context.fillStyle = "rgba(18, 24, 30, 0.86)";
+  context.strokeStyle = "#f4bd37";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.roundRect(x, y, width, height, 7);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = "#f8fbfc";
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  context.fillText(text, x + paddingX, y + height / 2);
+  context.restore();
+}
+
+function getPointBounds(points: Vec2[]): { minX: number; minY: number; maxX: number; maxY: number } {
+  return points.reduce(
+    (bounds, point) => ({
+      minX: Math.min(bounds.minX, point.x),
+      minY: Math.min(bounds.minY, point.y),
+      maxX: Math.max(bounds.maxX, point.x),
+      maxY: Math.max(bounds.maxY, point.y),
+    }),
+    { minX: points[0].x, minY: points[0].y, maxX: points[0].x, maxY: points[0].y },
+  );
+}
+
+function fitCanvasText(text: string, maxWidth: number): string {
+  if (context.measureText(text).width <= maxWidth) {
+    return text;
+  }
+
+  const ellipsis = "...";
+  let fitted = text;
+  while (fitted.length > 0 && context.measureText(`${fitted}${ellipsis}`).width > maxWidth) {
+    fitted = fitted.slice(0, -1);
+  }
+  return fitted.length > 0 ? `${fitted}${ellipsis}` : ellipsis;
 }
 
 function drawTraceBox(body: BenchmarkTraceFrame["bodies"][number], fill: string): void {
@@ -518,6 +577,33 @@ function drawTraceBox(body: BenchmarkTraceFrame["bodies"][number], fill: string)
   context.lineWidth = 3;
   context.fillRect(-18, -18, 36, 36);
   context.strokeRect(-18, -18, 36, 36);
+  context.restore();
+}
+
+function drawTraceBodyParts(body: BenchmarkTraceFrame["bodies"][number], localVertices: Vec2[][], fill: string): void {
+  if (localVertices.length === 0) {
+    drawTraceBox(body, fill);
+    return;
+  }
+
+  context.save();
+  context.fillStyle = fill;
+  context.strokeStyle = "#171b24";
+  context.lineWidth = 3;
+  for (const vertices of localVertices) {
+    context.beginPath();
+    vertices.forEach((vertex, index) => {
+      const world = toTraceWorldPoint(vertex, body);
+      if (index === 0) {
+        context.moveTo(world.x, world.y);
+      } else {
+        context.lineTo(world.x, world.y);
+      }
+    });
+    context.closePath();
+    context.fill();
+    context.stroke();
+  }
   context.restore();
 }
 
@@ -589,17 +675,44 @@ function updateTraceUi(): void {
 
   modeEyebrowEl.textContent = "Trace replay";
   traceRunEl.textContent = traceBundle ? traceBundle.level.id : "No run loaded";
-  traceResultEl.textContent = result ? `${result.terminalState}${result.success ? " pass" : " fail"}` : "Waiting";
-  traceFrameEl.textContent = result ? `${currentFrame} / ${result.terminalFrame}` : `0 / ${totalFrames}`;
-  traceQuietEl.textContent = `${quietFrames} frames`;
+  traceResultEl.textContent = result ? (result.success ? "Pass" : `Fail: ${result.terminalState}`) : "Waiting";
+  traceFrameEl.textContent = result ? `Frame ${currentFrame}/${result.terminalFrame}` : `Frames ${totalFrames}`;
+  traceQuietEl.textContent = `Quiet ${quietFrames}`;
+  traceModelEl.textContent = formatTraceModel(traceBundle);
+  traceReasoningEl.textContent = traceBundle?.metadata.reasoning ?? "No AI reasoning recorded.";
   levelTitleEl.textContent = traceBundle ? traceBundle.level.instruction : "Trace viewer";
   levelCopyEl.textContent = result
-    ? `Terminal frame ${result.terminalFrame}. Quiet frames ${result.quietFrames}.`
+    ? `Terminal ${result.terminalFrame} · ${result.strokeCount} stroke · ${Math.round(result.strokeLength)} px`
     : "Upload a run from the project runs folder to inspect recorded frames.";
   tracePlayButton.textContent = tracePlaying ? "Pause" : "Play";
   tracePhysicsButton.textContent = showPhysicsBodies ? "Show visual" : "Show physics";
   traceScrubber.max = String(Math.max(0, totalFrames - 1));
   traceScrubber.value = String(traceFrameIndex);
+}
+
+function formatTraceModel(bundle: BenchmarkRunBundle | null): string {
+  if (!bundle) {
+    return "No run loaded";
+  }
+  if (bundle.metadata.source !== "openrouter" || !bundle.metadata.model) {
+    return "Manual run";
+  }
+
+  const parts = [bundle.metadata.model];
+  if (bundle.metadata.provider) {
+    parts.push(`via ${bundle.metadata.provider}`);
+  }
+  if (bundle.metadata.temperature !== undefined) {
+    parts.push(`temp ${bundle.metadata.temperature}`);
+  }
+  return parts.join(" · ");
+}
+
+function formatTraceModelLabel(bundle: BenchmarkRunBundle | null): string {
+  if (!bundle) {
+    return "No model";
+  }
+  return bundle.metadata.model ?? "Manual run";
 }
 
 function getActiveLevel(): LevelDefinition {
@@ -709,6 +822,7 @@ async function loadRunBundle(): Promise<void> {
     traceLevel = bundle.level;
     traceStaticSim = createSimulation(bundle.level);
     traceStrokeLocalPoints = buildTraceStrokeLocalPoints(bundle);
+    traceBodyLocalVertices = buildTraceBodyLocalVertices(traceStaticSim);
     traceFrameIndex = 0;
     traceAccumulator = 0;
     tracePlaying = false;
@@ -717,6 +831,7 @@ async function loadRunBundle(): Promise<void> {
   } catch (error) {
     traceBundle = null;
     tracePlaying = false;
+    traceBodyLocalVertices = new Map();
     statusEl.textContent = "Invalid run";
     levelCopyEl.textContent = error instanceof Error ? error.message : "Could not load this run bundle.";
   }
@@ -754,6 +869,21 @@ function buildTraceStrokeLocalPoints(bundle: BenchmarkRunBundle): Map<string, Ve
     }
   }
 
+  return map;
+}
+
+function buildTraceBodyLocalVertices(setupSim: ReturnType<typeof createSimulation>): Map<string, Vec2[][]> {
+  const map = new Map<string, Vec2[][]>();
+  for (const body of Composite.allBodies(setupSim.engine.world)) {
+    if (body.label !== "cup") {
+      continue;
+    }
+    const parts = body.parts.length > 1 ? body.parts.slice(1) : body.parts;
+    map.set(
+      body.label,
+      parts.map((part) => toLocalPoints(part.vertices, body)),
+    );
+  }
   return map;
 }
 

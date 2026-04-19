@@ -41,22 +41,23 @@
             <strong id="stroke-count">0 / 1</strong>
           </div>
         </div>
-        <div id="trace-stats" class="status-grid" hidden>
-          <div>
+        <div id="trace-stats" class="trace-summary" hidden>
+          <div class="trace-primary">
             <span>Run</span>
             <strong id="trace-run">No run loaded</strong>
           </div>
-          <div>
-            <span>Result</span>
-            <strong id="trace-result">Waiting</strong>
+          <div class="trace-primary">
+            <span>Model</span>
+            <strong id="trace-model">Manual run</strong>
           </div>
-          <div>
-            <span>Frame</span>
-            <strong id="trace-frame">0 / 0</strong>
+          <div class="trace-reasoning">
+            <span>Reasoning</span>
+            <strong id="trace-reasoning">No AI reasoning recorded.</strong>
           </div>
-          <div>
-            <span>Quiet</span>
-            <strong id="trace-quiet">0 frames</strong>
+          <div class="trace-badges" aria-label="Trace metadata">
+            <span id="trace-result">Waiting</span>
+            <span id="trace-frame">0 / 0</span>
+            <span id="trace-quiet">0 frames</span>
           </div>
         </div>
         <div id="play-controls" class="button-row">

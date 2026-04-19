@@ -59,5 +59,18 @@ export type BenchmarkRunBundle = {
   metadata: {
     createdAt: string;
     runner: string;
+    source?: "manual" | "openrouter";
+    model?: string;
+    promptVersion?: string;
+    temperature?: number;
+    seed?: number;
+    responseId?: string;
+    reasoning?: string;
+    usage?: {
+      promptTokens?: number;
+      completionTokens?: number;
+      totalTokens?: number;
+    };
+    provider?: string;
   };
 };
