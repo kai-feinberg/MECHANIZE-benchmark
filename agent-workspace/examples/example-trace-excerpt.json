@@ -1,0 +1,98 @@
+{
+  "note": "This is a small, non-replayable excerpt that shows trace structure. Use real run bundles from runs/<level-id>/<run-id>/run.json in the browser trace viewer.",
+  "schemaVersion": 1,
+  "level": {
+    "id": "ground-left-wall-v1",
+    "world": { "width": 1000, "height": 700 },
+    "ball": { "position": { "x": 720, "y": 596 }, "radius": 26 },
+    "floor": { "y": 670, "height": 60 },
+    "goal": { "type": "hit-left-wall", "contactFrames": 1 },
+    "limits": { "maxStrokes": 1 }
+  },
+  "action": {
+    "levelId": "ground-left-wall-v1",
+    "strokes": [
+      {
+        "id": "attempt-001-pusher",
+        "width": 40,
+        "points": [
+          { "x": 720, "y": 360 },
+          { "x": 900, "y": 560 }
+        ]
+      }
+    ]
+  },
+  "result": {
+    "levelId": "ground-left-wall-v1",
+    "success": true,
+    "terminalState": "success",
+    "firstSuccessFrame": 76,
+    "terminalFrame": 76,
+    "finalBall": {
+      "position": { "x": 25.8, "y": 614.2 },
+      "velocity": { "x": -6.1, "y": 0.2 }
+    },
+    "strokeCount": 1,
+    "strokeLength": 269.07,
+    "frameBudget": 900
+  },
+  "trace": {
+    "levelId": "ground-left-wall-v1",
+    "frames": [
+      {
+        "frame": 1,
+        "bodies": [
+          {
+            "label": "ball",
+            "position": { "x": 720, "y": 596.3 },
+            "angle": 0,
+            "velocity": { "x": 0, "y": 0.28 },
+            "angularVelocity": 0
+          }
+        ],
+        "goalAchieved": false,
+        "terminalState": null,
+        "quietFrames": 0,
+        "movement": []
+      },
+      {
+        "frame": 38,
+        "bodies": [
+          {
+            "label": "ball",
+            "position": { "x": 420.5, "y": 612.8 },
+            "angle": -0.8,
+            "velocity": { "x": -10.4, "y": 0.9 },
+            "angularVelocity": -0.04
+          }
+        ],
+        "goalAchieved": false,
+        "terminalState": null,
+        "quietFrames": 0,
+        "movement": []
+      },
+      {
+        "frame": 76,
+        "bodies": [
+          {
+            "label": "ball",
+            "position": { "x": 25.8, "y": 614.2 },
+            "angle": -1.7,
+            "velocity": { "x": -6.1, "y": 0.2 },
+            "angularVelocity": -0.02
+          }
+        ],
+        "goalAchieved": true,
+        "terminalState": "success",
+        "quietFrames": 0,
+        "movement": []
+      }
+    ]
+  },
+  "metadata": {
+    "createdAt": "2026-04-19T00:00:00.000Z",
+    "runner": "brain-it-on-benchmark",
+    "source": "manual",
+    "model": "example-agent"
+  }
+}

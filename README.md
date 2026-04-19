@@ -171,6 +171,26 @@ pnpm bench action.json --trace trace.json
 
 Use `--bundle` when you want a specific copy of the full replayable bundle. Use `--trace` when you want just the trace payload written separately.
 
+## Local Coding Agent Workflow
+
+Coding agents can solve levels without calling OpenRouter by editing JSON action files and running the local benchmark. The entry point is [`AGENTS.md`](/Users/kai/Desktop/projects/brain-it-on-benchmark/AGENTS.md), with templates under [`agent-workspace/agent-runs/_template`](/Users/kai/Desktop/projects/brain-it-on-benchmark/agent-workspace/agent-runs/_template).
+
+Recommended layout:
+
+```text
+agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/action.json
+agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/notes.md
+agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-002/action.json
+```
+
+Run an attempt and write a stable trace bundle next to it:
+
+```bash
+pnpm bench agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/action.json --bundle agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/run.json
+```
+
+The CLI returns the pass/fail summary and a generated `runPath`. Agents should copy the result, generated `runPath`, and attempt-local `run.json` path into that attempt's `notes.md`, then create the next numbered attempt when they want to iterate. Root `runs/` remains gitignored, while `agent-workspace/agent-runs/.../attempt-NNN/run.json` gives each model attempt a stable trace to upload in the viewer.
+
 ## View Traces
 
 Every benchmark run writes a full run bundle to:
@@ -187,6 +207,8 @@ To replay one:
 4. Use play, pause, previous frame, next frame, scrubber, speed, and physics-body controls to inspect the attempt.
 
 Trace bundles include the level, action, result, metadata, and per-frame dynamic body state. AI-generated runs can also include model metadata and the model's reasoning string.
+
+Do not read an entire `run.json` into an agent context. Use the browser trace viewer for visual inspection, or sample only summary fields and a few frames. See [`agent-workspace/docs/trace-guide.md`](/Users/kai/Desktop/projects/brain-it-on-benchmark/agent-workspace/docs/trace-guide.md) and [`agent-workspace/examples/example-trace-excerpt.json`](/Users/kai/Desktop/projects/brain-it-on-benchmark/agent-workspace/examples/example-trace-excerpt.json).
 
 ## Run The AI Benchmark
 
@@ -223,6 +245,7 @@ src/ai/       OpenRouter client, prompt builder, AI benchmark CLI
 src/main.ts   Browser playground and trace viewer
 public/       README GIFs and static assets
 runs/         Generated benchmark run bundles
+agent-workspace/ Tracked agent instructions, attempt templates, and trace guide
 ```
 
 ## Development Checks

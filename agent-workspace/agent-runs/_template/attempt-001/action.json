@@ -1,0 +1,13 @@
+{
+  "levelId": "ground-left-wall-v1",
+  "strokes": [
+    {
+      "id": "attempt-001-pusher",
+      "width": 40,
+      "points": [
+        { "x": 720, "y": 360 },
+        { "x": 900, "y": 560 }
+      ]
+    }
+  ]
+}
