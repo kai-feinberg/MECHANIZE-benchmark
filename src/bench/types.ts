@@ -1,4 +1,4 @@
-import type { BodyMovementSummary, MovementThresholds, StrokeAction, TerminalState, Vec2 } from "../sim/types";
+import type { BodyMovementSummary, LevelDefinition, MovementThresholds, StrokeAction, TerminalState, Vec2 } from "../sim/types";
 
 export type CandidateAction = {
   levelId: string;
@@ -48,4 +48,16 @@ export type BenchmarkResult = {
   strokeLength: number;
   frameBudget: number;
   trace?: BenchmarkTrace;
+};
+
+export type BenchmarkRunBundle = {
+  schemaVersion: 1;
+  level: LevelDefinition;
+  action: CandidateAction;
+  result: Omit<BenchmarkResult, "trace">;
+  trace: BenchmarkTrace;
+  metadata: {
+    createdAt: string;
+    runner: string;
+  };
 };

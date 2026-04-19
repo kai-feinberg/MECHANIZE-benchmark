@@ -4,7 +4,7 @@ import { createSimulation } from "../sim/simulation";
 import { measureStrokeLength } from "../sim/strokeBody";
 import { DEFAULT_STOPPING_CRITERIA, StoppingCriteriaEvaluator, type PartialStoppingCriteriaConfig } from "../sim/stopping";
 import type { GameSimulation, LevelDefinition, TerminalState } from "../sim/types";
-import type { BenchmarkBodyTrace, BenchmarkResult, BenchmarkTrace, BenchmarkTraceFrame, CandidateAction } from "./types";
+import type { BenchmarkBodyTrace, BenchmarkResult, BenchmarkRunBundle, BenchmarkTrace, BenchmarkTraceFrame, CandidateAction } from "./types";
 
 const { Composite } = Matter;
 
@@ -89,6 +89,34 @@ export function runBenchmark(action: CandidateAction, options: RunBenchmarkOptio
 
 export { DEFAULT_STOPPING_CRITERIA };
 
+export function createRunBundle(action: CandidateAction, options: Omit<RunBenchmarkOptions, "includeTrace"> = {}): BenchmarkRunBundle {
+  const availableLevels = options.levels ?? levels;
+  const level = availableLevels.find((candidate) => candidate.id === action.levelId);
+  if (!level) {
+    throw new Error(`Unknown levelId: ${action.levelId}`);
+  }
+
+  const result = runBenchmark(action, {
+    ...options,
+    includeTrace: true,
+  });
+  if (!result.trace) {
+    throw new Error("Expected benchmark trace to be recorded.");
+  }
+
+  return {
+    schemaVersion: 1,
+    level,
+    action,
+    result: stripTrace(result),
+    trace: result.trace,
+    metadata: {
+      createdAt: new Date().toISOString(),
+      runner: "brain-it-on-benchmark",
+    },
+  };
+}
+
 function createTraceFrame(
   sim: GameSimulation,
   frame: number,
@@ -120,4 +148,10 @@ function createTraceFrame(
     quietFrames,
     movement,
   };
+}
+
+function stripTrace(result: BenchmarkResult): Omit<BenchmarkResult, "trace"> {
+  const withoutTrace = { ...result };
+  delete withoutTrace.trace;
+  return withoutTrace;
 }

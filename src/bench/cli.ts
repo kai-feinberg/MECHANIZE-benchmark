@@ -1,11 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { levels } from "../sim/level";
-import { runBenchmark } from "./runner";
+import { createRunBundle, runBenchmark } from "./runner";
 import { parseCandidateFile } from "./validation";
 import type { BenchmarkResult } from "./types";
 
 type CliOptions = {
   actionFile: string;
+  bundleFile: string | null;
   traceFile: string | null;
   frameBudget: number | null;
 };
@@ -15,9 +16,27 @@ async function main(): Promise<void> {
   const raw = JSON.parse(await readFile(options.actionFile, "utf8")) as unknown;
   const candidates = parseCandidateFile(raw, levels);
 
+  if (options.bundleFile) {
+    if (candidates.length !== 1) {
+      throw new Error("--bundle supports one candidate action at a time.");
+    }
+  }
+
+  const bundle = options.bundleFile
+    ? createRunBundle(candidates[0], {
+        stopping: {
+          frameBudget: options.frameBudget ?? undefined,
+        },
+      })
+    : null;
+
+  if (options.bundleFile && bundle) {
+    await writeFile(options.bundleFile, JSON.stringify(bundle, null, 2));
+  }
+
   const results = candidates.map((candidate) =>
     runBenchmark(candidate, {
-      includeTrace: Boolean(options.traceFile),
+      includeTrace: Boolean(options.traceFile) && !options.bundleFile,
       stopping: {
         frameBudget: options.frameBudget ?? undefined,
       },
@@ -28,7 +47,7 @@ async function main(): Promise<void> {
     await writeFile(
       options.traceFile,
       JSON.stringify(
-        results.map((result) => result.trace),
+        bundle ? bundle.trace : results.map((result) => result.trace),
         null,
         2,
       ),
@@ -41,12 +60,16 @@ async function main(): Promise<void> {
 
 function parseArgs(args: string[]): CliOptions {
   let actionFile = "";
+  let bundleFile: string | null = null;
   let traceFile: string | null = null;
   let frameBudget: number | null = null;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--trace") {
+    if (arg === "--bundle") {
+      bundleFile = requireArgValue(args, index, "--bundle");
+      index += 1;
+    } else if (arg === "--trace") {
       traceFile = requireArgValue(args, index, "--trace");
       index += 1;
     } else if (arg === "--max-frames") {
@@ -56,7 +79,9 @@ function parseArgs(args: string[]): CliOptions {
       }
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: pnpm bench <action-file.json> [--trace trace.json] [--max-frames 900]\n");
+      process.stdout.write(
+        "Usage: pnpm bench <action-file.json> [--bundle run.json] [--trace trace.json] [--max-frames 900]\n",
+      );
       process.exit(0);
     } else if (!actionFile) {
       actionFile = arg;
@@ -66,10 +91,10 @@ function parseArgs(args: string[]): CliOptions {
   }
 
   if (!actionFile) {
-    throw new Error("Missing action file. Usage: pnpm bench <action-file.json> [--trace trace.json] [--max-frames 900]");
+    throw new Error("Missing action file. Usage: pnpm bench <action-file.json> [--bundle run.json] [--trace trace.json] [--max-frames 900]");
   }
 
-  return { actionFile, traceFile, frameBudget };
+  return { actionFile, bundleFile, traceFile, frameBudget };
 }
 
 function requireArgValue(args: string[], index: number, name: string): string {

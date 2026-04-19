@@ -11,6 +11,10 @@
         <canvas id="game" aria-label="Lift the ball off the ground"></canvas>
       </section>
       <aside class="control-panel" aria-label="Level controls">
+        <div class="mode-tabs" aria-label="Mode">
+          <button id="play-mode" class="active" type="button">Play</button>
+          <button id="trace-mode" type="button">Trace</button>
+        </div>
         <div>
           <p class="eyebrow">Playable V1</p>
           <h1 id="level-title">Lift the ball off the ground</h1>
@@ -37,14 +41,37 @@
             <strong id="stroke-count">0 / 1</strong>
           </div>
         </div>
-        <div class="button-row">
+        <div id="play-controls" class="button-row">
           <button id="toggle-run" type="button">Pause</button>
           <button id="toggle-physics" type="button">Show physics</button>
           <button id="reset" type="button">Reset</button>
           <button id="clear-stroke" type="button">Clear stroke</button>
         </div>
-        <label class="json-label" for="stroke-json">Current stroke JSON</label>
-        <textarea id="stroke-json" readonly spellcheck="false" placeholder="Draw a stroke to export points."></textarea>
+        <div id="trace-controls" class="trace-controls" hidden>
+          <label class="file-picker" for="run-bundle">
+            <span>Run bundle</span>
+            <input id="run-bundle" type="file" accept="application/json,.json" />
+          </label>
+          <input id="trace-scrubber" type="range" min="0" max="0" value="0" />
+          <div class="button-row">
+            <button id="trace-play" type="button">Play</button>
+            <button id="trace-prev" type="button">Prev</button>
+            <button id="trace-next" type="button">Next</button>
+            <button id="trace-physics" type="button">Show physics</button>
+          </div>
+          <label class="select-label" for="trace-speed">Speed</label>
+          <select id="trace-speed">
+            <option value="0.25">0.25x</option>
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="2">2x</option>
+            <option value="4">4x</option>
+          </select>
+        </div>
+        <div id="stroke-export">
+          <label class="json-label" for="stroke-json">Current stroke JSON</label>
+          <textarea id="stroke-json" readonly spellcheck="false" placeholder="Draw a stroke to export points."></textarea>
+        </div>
       </aside>
     </main>
     <script type="module" src="/src/main.ts"></script>

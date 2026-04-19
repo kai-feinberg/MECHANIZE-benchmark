@@ -29,6 +29,8 @@ body {
 }
 
 button,
+input,
+select,
 textarea {
   font: inherit;
 }
@@ -69,6 +71,27 @@ textarea {
   padding: 28px;
   border-left: 1px solid var(--line);
   background: var(--panel);
+}
+
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #151d26;
+}
+
+.mode-tabs button {
+  min-height: 38px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.mode-tabs button.active {
+  color: #171b24;
+  background: var(--gold);
 }
 
 .eyebrow {
@@ -161,6 +184,38 @@ button:hover {
 
 button:active {
   transform: translateY(1px);
+}
+
+.trace-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-picker {
+  display: grid;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.file-picker input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #52606d;
+  border-radius: 8px;
+  padding: 8px;
+  color: #f8fbfc;
+  background: #151d26;
+  text-transform: none;
+}
+
+#trace-scrubber {
+  width: 100%;
+  accent-color: var(--gold);
 }
 
 .json-label {

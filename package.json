@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "viewer": "vite",
     "bench": "tsx src/bench/cli.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
