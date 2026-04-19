@@ -2,26 +2,30 @@ import type { LevelDefinition } from "./types";
 
 export const FIXED_TIMESTEP_MS = 1000 / 60;
 
-export const liftBallLevel: LevelDefinition = {
-  id: "lift-ball-v1",
-  name: "Lift the ball",
-  instruction: "Lift the ball off the ground",
+export const groundLeftWallLevel: LevelDefinition = {
+  id: "ground-left-wall-v1",
+  name: "Ground left wall",
+  instruction: "Get the ball to the left wall",
   world: {
     width: 1000,
     height: 700,
   },
   ball: {
-    position: { x: 340, y: 535 },
-    radius: 105,
+    position: { x: 720, y: 596 },
+    radius: 26,
+    density: 0.00045,
+    friction: 0.002,
+    frictionStatic: 0,
+    frictionAir: 0.0002,
+    restitution: 0.12,
   },
   floor: {
     y: 670,
     height: 60,
   },
   goal: {
-    type: "off-ground",
-    offGroundFrames: 150,
-    groundClearance: 3,
+    type: "hit-left-wall",
+    contactFrames: 1,
   },
   limits: {
     maxStrokes: 1,
@@ -40,9 +44,9 @@ export const hitLeftWallLevel: LevelDefinition = {
     position: { x: 610, y: 596 },
     radius: 26,
     density: 0.00045,
-    friction: 0.005,
+    friction: 0.002,
     frictionStatic: 0,
-    frictionAir: 0.0008,
+    frictionAir: 0.0002,
     restitution: 0.18,
   },
   floor: {
@@ -64,4 +68,4 @@ export const hitLeftWallLevel: LevelDefinition = {
   },
 };
 
-export const levels = [liftBallLevel, hitLeftWallLevel] as const;
+export const levels = [groundLeftWallLevel, hitLeftWallLevel] as const;

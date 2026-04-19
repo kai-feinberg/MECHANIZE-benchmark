@@ -4,8 +4,9 @@ import "./styles.css";
 import { levels } from "./sim/level";
 import { createSimulation } from "./sim/simulation";
 import { measureStrokeLength, prepareStrokePoints } from "./sim/strokeBody";
+import { StoppingCriteriaEvaluator } from "./sim/stopping";
 import type { BenchmarkRunBundle, BenchmarkTraceFrame } from "./bench/types";
-import type { LevelDefinition, StrokeAction, Vec2 } from "./sim/types";
+import type { LevelDefinition, StrokeAction, TerminalState, Vec2 } from "./sim/types";
 
 const { Composite } = Matter;
 
@@ -43,6 +44,9 @@ const traceSpeedSelect = requireElement<HTMLSelectElement>("#trace-speed");
 const context = requireCanvasContext(canvas);
 
 let sim = createSimulation(levels[0]);
+let playStopping = new StoppingCriteriaEvaluator();
+let playFrame = 0;
+let playTerminalState: TerminalState | null = null;
 let mode: "play" | "trace" = "play";
 const pointerScale = { x: 1, y: 1 };
 let running = true;
@@ -145,6 +149,9 @@ function finishStroke(event: PointerEvent): void {
     points: activeStroke,
   };
   committedStrokeBody = sim.addStroke(committedStroke);
+  if (committedStrokeBody) {
+    playStopping.markStrokeAdded(playFrame);
+  }
   committedStrokeLocalPoints = committedStrokeBody ? toLocalPoints(prepareStrokePoints(committedStroke.points), committedStrokeBody) : [];
   activeStroke = [];
   updateUi();
@@ -152,6 +159,9 @@ function finishStroke(event: PointerEvent): void {
 
 function clearStroke(): void {
   sim.reset();
+  playStopping = new StoppingCriteriaEvaluator();
+  playFrame = 0;
+  playTerminalState = null;
   committedStroke = null;
   committedStrokeBody = null;
   committedStrokeLocalPoints = [];
@@ -162,6 +172,9 @@ function clearStroke(): void {
 
 function resetLevel(): void {
   sim.reset();
+  playStopping = new StoppingCriteriaEvaluator();
+  playFrame = 0;
+  playTerminalState = null;
   activeStroke = [];
   committedStroke = null;
   committedStrokeBody = null;
@@ -173,6 +186,9 @@ function resetLevel(): void {
 function changeLevel(): void {
   const nextLevel = levels.find((level) => level.id === levelSelect.value) ?? levels[0];
   sim = createSimulation(nextLevel);
+  playStopping = new StoppingCriteriaEvaluator();
+  playFrame = 0;
+  playTerminalState = null;
   activeStroke = [];
   committedStroke = null;
   committedStrokeBody = null;
@@ -187,11 +203,17 @@ function gameLoop(now: number): void {
   const elapsed = Math.min(100, now - lastFrameTime);
   lastFrameTime = now;
 
-  if (mode === "play" && running && !sim.goal.achieved) {
+  if (mode === "play" && running && !playTerminalState) {
     accumulator += elapsed;
     while (accumulator >= 1000 / 60) {
       sim.step();
+      playFrame += 1;
+      playTerminalState = playStopping.evaluate(sim, playFrame).terminalState;
       accumulator -= 1000 / 60;
+      if (playTerminalState) {
+        running = false;
+        break;
+      }
     }
   } else if (mode === "trace" && tracePlaying && traceBundle) {
     traceAccumulator += elapsed * Number(traceSpeedSelect.value);
@@ -240,8 +262,8 @@ function render(): void {
     drawStrokePreview(activeStroke);
   }
 
-  if (sim.goal.achieved) {
-    drawSuccess();
+  if (playTerminalState) {
+    drawPlayTerminal(playTerminalState);
   }
 
   context.restore();
@@ -389,19 +411,19 @@ function traceSmoothPath(points: Vec2[]): void {
   context.lineTo(last.x, last.y);
 }
 
-function drawSuccess(): void {
+function drawPlayTerminal(terminalState: TerminalState): void {
   context.save();
   context.fillStyle = "rgba(18, 24, 30, 0.74)";
   context.fillRect(320, 268, 360, 114);
-  context.strokeStyle = "#f4bd37";
+  context.strokeStyle = terminalState === "success" ? "#f4bd37" : "#e94666";
   context.lineWidth = 3;
   context.strokeRect(320, 268, 360, 114);
   context.fillStyle = "#ffffff";
   context.font = "34px Inter, Arial, sans-serif";
   context.textAlign = "center";
-  context.fillText("Success", 500, 322);
+  context.fillText(terminalState === "success" ? "Success" : terminalState, 500, 322);
   context.font = "18px Inter, Arial, sans-serif";
-  context.fillText("The ball stayed off the ground.", 500, 352);
+  context.fillText(`Frame ${playFrame}`, 500, 352);
   context.restore();
 }
 
@@ -520,8 +542,8 @@ function updateUi(): void {
   }
 
   modeEyebrowEl.textContent = "Playable V1";
-  if (sim.goal.achieved) {
-    statusEl.textContent = "Success";
+  if (playTerminalState) {
+    statusEl.textContent = playTerminalState === "success" ? "Success" : playTerminalState;
   } else if (!running) {
     statusEl.textContent = "Paused";
   } else if (sim.level.goal.type === "hit-left-wall") {
@@ -539,7 +561,7 @@ function updateUi(): void {
   levelTitleEl.textContent = sim.level.instruction;
   levelCopyEl.textContent =
     sim.level.goal.type === "hit-left-wall"
-      ? "Draw one light touch, ramp, or nudge to roll the small ball out of the cup and into the target wall."
+      ? "Draw a falling stroke to nudge the ball into the target wall."
       : "Draw one heavy stroke. Release to let it fall, push, tip, or wedge the ball upward.";
   toggleRunButton.textContent = running ? "Pause" : "Run";
   togglePhysicsButton.textContent = showPhysicsBodies ? "Show visual" : "Show physics";

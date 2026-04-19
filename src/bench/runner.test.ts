@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { liftBallLevel } from "../sim/level";
+import { groundLeftWallLevel } from "../sim/level";
 import { runBenchmark } from "./runner";
 import { parseCandidateFile } from "./validation";
 import type { CandidateAction } from "./types";
@@ -9,7 +9,7 @@ describe("benchmark runner", () => {
   it("reports timeout when the frame budget is exhausted", () => {
     const result = runBenchmark(
       {
-        levelId: liftBallLevel.id,
+        levelId: groundLeftWallLevel.id,
         strokes: [],
       },
       {
@@ -28,7 +28,7 @@ describe("benchmark runner", () => {
   it("reports stalled when all dynamic bodies settle", () => {
     const result = runBenchmark(
       {
-        levelId: liftBallLevel.id,
+        levelId: groundLeftWallLevel.id,
         strokes: [],
       },
       {
@@ -91,7 +91,7 @@ describe("benchmark runner", () => {
     expect(() =>
       parseCandidateFile(
         {
-          levelId: liftBallLevel.id,
+          levelId: groundLeftWallLevel.id,
           strokes: [
             {
               id: "bad",
@@ -103,7 +103,7 @@ describe("benchmark runner", () => {
             },
           ],
         },
-        [liftBallLevel],
+        [groundLeftWallLevel],
       ),
     ).toThrow(/world bounds/);
   });

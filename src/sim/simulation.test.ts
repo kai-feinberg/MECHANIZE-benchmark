@@ -1,15 +1,15 @@
 import Matter from "matter-js";
 import { describe, expect, it } from "vitest";
-import { hitLeftWallLevel } from "./level";
+import { groundLeftWallLevel, hitLeftWallLevel } from "./level";
 import { createSimulation, evaluateGoal } from "./simulation";
 import type { StrokeAction } from "./types";
 
 describe("game simulation", () => {
-  it("initializes the lift-ball level", () => {
+  it("initializes the default ground-left-wall level", () => {
     const sim = createSimulation();
 
     expect(sim.level.world).toEqual({ width: 1000, height: 700 });
-    expect(sim.level.goal).toEqual({ type: "off-ground", offGroundFrames: 150, groundClearance: 3 });
+    expect(sim.level.goal).toEqual({ type: "hit-left-wall", contactFrames: 1 });
     expect(sim.bodies.ball.label).toBe("ball");
     expect(sim.bodies.floor.isStatic).toBe(true);
     expect(sim.goal.achieved).toBe(false);
@@ -27,26 +27,21 @@ describe("game simulation", () => {
     expect(sim.bodies.ball.position.y).not.toBe(startY);
   });
 
-  it("requires the ball to stay off the ground for consecutive frames", () => {
-    const sim = createSimulation();
+  it("requires the ball to touch the left wall", () => {
+    const sim = createSimulation(groundLeftWallLevel);
     let goal = sim.goal;
-    const floorTop = sim.level.floor.y - sim.level.floor.height / 2;
-
-    expect(sim.level.goal.type).toBe("off-ground");
-    if (sim.level.goal.type !== "off-ground") {
-      throw new Error("Expected off-ground goal.");
-    }
 
     Matter.Body.setPosition(sim.bodies.ball, {
-      x: sim.level.ball.position.x,
-      y: floorTop - sim.level.ball.radius - sim.level.goal.groundClearance,
+      x: sim.level.ball.radius + 20,
+      y: sim.level.ball.position.y,
     });
+    goal = evaluateGoal(sim.level, sim.bodies.ball, goal);
+    expect(goal.achieved).toBe(false);
 
-    for (let index = 0; index < sim.level.goal.offGroundFrames - 1; index += 1) {
-      goal = evaluateGoal(sim.level, sim.bodies.ball, goal);
-      expect(goal.achieved).toBe(false);
-    }
-
+    Matter.Body.setPosition(sim.bodies.ball, {
+      x: sim.level.ball.radius,
+      y: sim.level.ball.position.y,
+    });
     goal = evaluateGoal(sim.level, sim.bodies.ball, goal);
     expect(goal.achieved).toBe(true);
   });
@@ -109,7 +104,7 @@ describe("game simulation", () => {
   });
 });
 
-function runReplay(stroke: StrokeAction): { x: number; y: number; achieved: boolean; consecutiveOffGroundFrames: number } {
+function runReplay(stroke: StrokeAction): { x: number; y: number; achieved: boolean; consecutiveLeftWallContactFrames: number } {
   const sim = createSimulation();
   sim.addStroke(stroke);
 
@@ -121,6 +116,6 @@ function runReplay(stroke: StrokeAction): { x: number; y: number; achieved: bool
     x: Math.round(sim.bodies.ball.position.x * 1000) / 1000,
     y: Math.round(sim.bodies.ball.position.y * 1000) / 1000,
     achieved: sim.goal.achieved,
-    consecutiveOffGroundFrames: sim.goal.consecutiveOffGroundFrames,
+    consecutiveLeftWallContactFrames: sim.goal.consecutiveLeftWallContactFrames,
   };
 }

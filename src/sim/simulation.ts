@@ -1,12 +1,12 @@
 import Matter from "matter-js";
 import type { Body as MatterBody, Engine as MatterEngine } from "matter-js";
-import { FIXED_TIMESTEP_MS, liftBallLevel } from "./level";
+import { FIXED_TIMESTEP_MS, groundLeftWallLevel } from "./level";
 import { createStrokeBody } from "./strokeBody";
 import type { GameSimulation, GoalState, LevelDefinition, StrokeAction, SimulationBodies } from "./types";
 
 const { Bodies, Composite, Engine } = Matter;
 
-export function createSimulation(level: LevelDefinition = liftBallLevel): GameSimulation {
+export function createSimulation(level: LevelDefinition = groundLeftWallLevel): GameSimulation {
   let engine = createEngine();
   let bodies = createLevelBodies(level);
   let goal = createInitialGoal(level);
@@ -98,7 +98,7 @@ function createLevelBodies(level: LevelDefinition): SimulationBodies {
     label: "floor",
     isStatic: true,
     friction: 0.05,
-    frictionStatic: 0.02,
+    frictionStatic: 0,
     render: {
       fillStyle: "#8b948f",
     },
