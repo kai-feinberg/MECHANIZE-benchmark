@@ -106,6 +106,21 @@ describe("game simulation", () => {
     expect(Matter.Query.collides(body, [sim.bodies.ball, ...sim.bodies.statics])).toHaveLength(0);
   });
 
+  it("rejects strokes that overlap cup geometry", () => {
+    const sim = createSimulation(hitLeftWallLevel);
+    const stroke: StrokeAction = {
+      id: "overlapping-cup",
+      width: 18,
+      points: [
+        { x: 546, y: 608 },
+        { x: 676, y: 608 },
+      ],
+    };
+
+    expect(sim.addStroke(stroke)).toBeNull();
+    expect(sim.bodies.strokes).toHaveLength(0);
+  });
+
   it("rejects strokes that overlap terrain too deeply", () => {
     const sim = createSimulation();
     const stroke: StrokeAction = {

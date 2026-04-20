@@ -1,6 +1,10 @@
 node_modules/
 dist/
 runs/
+agent-workspace/agent-runs/
+!agent-workspace/agent-runs/README.md
+!agent-workspace/agent-runs/_template/
+!agent-workspace/agent-runs/_template/**
 .DS_Store
 .env
 .env.*

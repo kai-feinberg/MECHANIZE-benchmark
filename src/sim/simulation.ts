@@ -37,11 +37,19 @@ export function createSimulation(level: LevelDefinition = groundLeftWallLevel): 
       return null;
     }
 
-    if (!nudgeStrokeOutOfExistingBodies(body, getStrokePlacementBlockers(bodies), level)) {
+    if (overlapsAny(body, bodies.statics)) {
+      return null;
+    }
+
+    if (!nudgeStrokeOutOfExistingBodies(body, getStrokeNudgeBlockers(bodies), level)) {
       return null;
     }
 
     if (hasSignificantTerrainOverlap(body, getStrokeTerrainBlockers(bodies))) {
+      return null;
+    }
+
+    if (overlapsAny(body, bodies.statics)) {
       return null;
     }
 
@@ -180,8 +188,8 @@ function addLevelBodies(engine: MatterEngine, bodies: SimulationBodies): void {
   ]);
 }
 
-function getStrokePlacementBlockers(bodies: SimulationBodies): MatterBody[] {
-  return [bodies.ball, ...bodies.statics];
+function getStrokeNudgeBlockers(bodies: SimulationBodies): MatterBody[] {
+  return [bodies.ball];
 }
 
 function getStrokeTerrainBlockers(bodies: SimulationBodies): MatterBody[] {
