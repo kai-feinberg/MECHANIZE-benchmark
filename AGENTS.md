@@ -12,6 +12,12 @@ Keep agent attempts under:
 agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/
 ```
 
+Use the actual model id or a clear model slug for `<agent-or-model-slug>`. `pnpm bench` automatically records that slug as the run metadata model when the action file lives under `agent-workspace/agent-runs/...`, so the Trace viewer can label runs by model instead of "Manual run". If the folder name is not the model id, pass an explicit override:
+
+```bash
+pnpm bench agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/action.json --bundle agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/run.json --model <model-id>
+```
+
 Use the template in:
 
 ```text
@@ -22,7 +28,7 @@ Each attempt folder should contain:
 
 - `action.json`: the candidate action passed to `pnpm bench`.
 - `run.json`: the generated replayable trace bundle for this exact attempt.
-- `notes.md`: the result, generated paths, observations, and next idea.
+- `notes.md`: the result, generated paths, model reasoning, observations, and next idea. The Trace viewer uses this file as the reasoning fallback when `run.json` does not include `metadata.reasoning`, so include a short `## Reasoning` or `## Observations` section that explains why the stroke was chosen and what happened.
 
 Do not overwrite older attempts. Copy the previous attempt to `attempt-002`, `attempt-003`, and so on, then edit the new `action.json`.
 
@@ -41,6 +47,14 @@ Run one attempt and write its trace bundle next to the action:
 ```bash
 pnpm bench agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/action.json --bundle agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/run.json
 ```
+
+If you already wrote attempt reasoning before running the benchmark, pass it into the bundle:
+
+```bash
+pnpm bench agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/action.json --bundle agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/run.json --reasoning-file agent-workspace/agent-runs/<agent-or-model-slug>/<level-id>/attempt-001/notes.md
+```
+
+When `notes.md` already exists next to `action.json`, `pnpm bench` automatically embeds it as `metadata.reasoning`.
 
 The CLI prints compact JSON with `success`, `terminalState`, `terminalFrame`, `finalBall`, and `runPath`. Save that output or its key fields in the attempt `notes.md`. The stable trace for the attempt is the `run.json` written by `--bundle`.
 

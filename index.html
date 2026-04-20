@@ -12,7 +12,7 @@
       </section>
       <aside class="control-panel" aria-label="Level controls">
         <div class="mode-tabs" aria-label="Mode">
-          <button id="play-mode" class="active" type="button">Play</button>
+          <button id="play-mode" class="active" type="button">Draw</button>
           <button id="trace-mode" type="button">Trace</button>
         </div>
         <div>
@@ -42,18 +42,6 @@
           </div>
         </div>
         <div id="trace-stats" class="trace-summary" hidden>
-          <div class="trace-primary">
-            <span>Run</span>
-            <strong id="trace-run">No run loaded</strong>
-          </div>
-          <div class="trace-primary">
-            <span>Model</span>
-            <strong id="trace-model">Manual run</strong>
-          </div>
-          <div class="trace-reasoning">
-            <span>Reasoning</span>
-            <strong id="trace-reasoning">No AI reasoning recorded.</strong>
-          </div>
           <div class="trace-badges" aria-label="Trace metadata">
             <span id="trace-result">Waiting</span>
             <span id="trace-frame">0 / 0</span>
@@ -67,25 +55,56 @@
           <button id="clear-stroke" type="button">Clear stroke</button>
         </div>
         <div id="trace-controls" class="trace-controls" hidden>
+          <div id="run-browser" class="run-browser">
+            <div class="run-browser-head">
+              <div>
+                <span class="select-label">Agent runs</span>
+                <strong id="run-browser-status">Scanning</strong>
+              </div>
+              <div class="run-browser-actions">
+                <button id="trace-play" class="primary-play" type="button">
+                  <span id="trace-play-icon" aria-hidden="true">▶</span>
+                  <span id="trace-play-label">Play</span>
+                </button>
+                <button id="run-browser-refresh" type="button">Refresh</button>
+              </div>
+            </div>
+            <label class="select-label" for="run-browser-agent">Agent</label>
+            <select id="run-browser-agent"></select>
+            <label class="select-label" for="run-browser-level">Level</label>
+            <select id="run-browser-level"></select>
+            <label class="select-label" for="run-browser-attempt">Attempt</label>
+            <select id="run-browser-attempt"></select>
+            <div class="button-row">
+              <button id="run-browser-prev" type="button">Previous run</button>
+              <button id="run-browser-next" type="button">Next run</button>
+            </div>
+            <div class="trace-reasoning">
+              <span>Reasoning</span>
+              <strong id="trace-reasoning">No AI reasoning recorded.</strong>
+            </div>
+          </div>
           <label class="file-picker" for="run-bundle">
-            <span>Run bundle</span>
+            <span>Upload run bundle</span>
             <input id="run-bundle" type="file" accept="application/json,.json" />
           </label>
           <input id="trace-scrubber" type="range" min="0" max="0" value="0" />
-          <div class="button-row">
-            <button id="trace-play" type="button">Play</button>
-            <button id="trace-prev" type="button">Prev</button>
-            <button id="trace-next" type="button">Next</button>
-            <button id="trace-physics" type="button">Show physics</button>
+          <div class="trace-transport">
+            <label class="toggle-control" for="trace-physics">
+              <input id="trace-physics" type="checkbox" />
+              <span>Physics</span>
+            </label>
+            <label class="speed-control" for="trace-speed">
+              <span>Speed</span>
+              <select id="trace-speed">
+                <option value="0.25">0.25x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+                <option value="4">4x</option>
+              </select>
+            </label>
           </div>
-          <label class="select-label" for="trace-speed">Speed</label>
-          <select id="trace-speed">
-            <option value="0.25">0.25x</option>
-            <option value="0.5">0.5x</option>
-            <option value="1" selected>1x</option>
-            <option value="2">2x</option>
-            <option value="4">4x</option>
-          </select>
         </div>
         <div id="stroke-export">
           <label class="json-label" for="stroke-json">Current stroke JSON</label>

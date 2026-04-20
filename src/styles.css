@@ -71,13 +71,13 @@ textarea {
 .control-panel {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 14px;
   min-width: 0;
   min-height: 0;
   max-height: 100vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 28px;
+  padding: 18px;
   border-left: 1px solid var(--line);
   background: var(--panel);
 }
@@ -115,12 +115,12 @@ textarea {
 h1 {
   margin: 0;
   color: #ffffff;
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1.05;
 }
 
 .copy {
-  margin: 14px 0 0;
+  margin: 8px 0 0;
   color: var(--text-soft);
   font-size: 15px;
   line-height: 1.55;
@@ -159,26 +159,28 @@ h1 {
 }
 
 .trace-reasoning strong {
+  display: -webkit-box;
   color: #dfe7eb;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
 }
 
 .trace-summary {
   display: grid;
-  gap: 9px;
+  gap: 6px;
 }
 
-.trace-primary,
 .trace-reasoning {
-  padding: 12px;
+  padding: 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #202933;
+  background: #19212a;
 }
 
-.trace-primary span,
 .trace-reasoning span {
   display: block;
   color: var(--text-soft);
@@ -186,15 +188,7 @@ h1 {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
-}
-
-.trace-primary strong {
-  display: block;
-  margin-top: 4px;
-  color: #ffffff;
-  font-size: 17px;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
+  margin-bottom: 4px;
 }
 
 .trace-badges {
@@ -217,11 +211,11 @@ h1 {
 
 select {
   width: 100%;
-  min-height: 42px;
-  margin-top: 8px;
+  min-height: 34px;
+  margin-top: 4px;
   border: 1px solid #52606d;
   border-radius: 8px;
-  padding: 0 12px;
+  padding: 0 9px;
   color: #f8fbfc;
   background: #151d26;
 }
@@ -229,7 +223,7 @@ select {
 .button-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 #play-controls button:last-child {
@@ -237,7 +231,7 @@ select {
 }
 
 button {
-  min-height: 44px;
+  min-height: 38px;
   border: 1px solid #52606d;
   border-radius: 8px;
   color: #f8fbfc;
@@ -256,7 +250,69 @@ button:active {
 .trace-controls {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 9px;
+}
+
+.run-browser {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #151d26;
+}
+
+.run-browser-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.run-browser-head strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fbfc;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.run-browser-head button {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.run-browser-actions {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.primary-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 94px;
+  min-height: 38px;
+  border-color: #f4bd37;
+  color: #171b24;
+  background: var(--gold);
+  font-weight: 900;
+}
+
+.primary-play:hover {
+  background: #ffd15b;
+}
+
+.primary-play span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .file-picker {
@@ -271,7 +327,7 @@ button:active {
 
 .file-picker input {
   width: 100%;
-  min-height: 42px;
+  min-height: 36px;
   border: 1px solid #52606d;
   border-radius: 8px;
   padding: 8px;
@@ -283,6 +339,58 @@ button:active {
 #trace-scrubber {
   width: 100%;
   accent-color: var(--gold);
+}
+
+.trace-transport {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 8px;
+  align-items: center;
+  justify-content: end;
+  padding: 8px 0 0;
+  background: var(--panel);
+}
+
+.toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid #52606d;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #f8fbfc;
+  background: #151d26;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.toggle-control input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--gold);
+}
+
+.speed-control {
+  display: inline-grid;
+  grid-template-columns: auto 76px;
+  gap: 6px;
+  align-items: center;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.speed-control select {
+  margin-top: 0;
+  min-height: 34px;
+  padding: 0 6px;
 }
 
 .json-label {

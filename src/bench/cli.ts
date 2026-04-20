@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { dirname, join, normalize } from "node:path";
 import { levels } from "../sim/level";
 import { createRunBundle, runBenchmark } from "./runner";
 import { parseCandidateFile } from "./validation";
@@ -11,12 +12,15 @@ type CliOptions = {
   runsDir: string;
   traceFile: string | null;
   frameBudget: number | null;
+  model: string | null;
+  reasoningFile: string | null;
 };
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const raw = JSON.parse(await readFile(options.actionFile, "utf8")) as unknown;
   const candidates = parseCandidateFile(raw, levels);
+  const metadata = await createBenchmarkMetadata(options);
 
   if (options.bundleFile && candidates.length !== 1) {
     throw new Error("--bundle supports one candidate action at a time.");
@@ -28,6 +32,7 @@ async function main(): Promise<void> {
         stopping: {
           frameBudget: options.frameBudget ?? undefined,
         },
+        metadata,
       });
       const runPath = await writeRunBundle(bundle, options.runsDir, options.actionFile);
       return { bundle, runPath };
@@ -71,6 +76,8 @@ function parseArgs(args: string[]): CliOptions {
   let runsDir = "runs";
   let traceFile: string | null = null;
   let frameBudget: number | null = null;
+  let model: string | null = null;
+  let reasoningFile: string | null = null;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -83,6 +90,12 @@ function parseArgs(args: string[]): CliOptions {
     } else if (arg === "--trace") {
       traceFile = requireArgValue(args, index, "--trace");
       index += 1;
+    } else if (arg === "--model") {
+      model = requireArgValue(args, index, "--model");
+      index += 1;
+    } else if (arg === "--reasoning-file") {
+      reasoningFile = requireArgValue(args, index, "--reasoning-file");
+      index += 1;
     } else if (arg === "--max-frames") {
       frameBudget = Number(requireArgValue(args, index, "--max-frames"));
       if (!Number.isInteger(frameBudget) || frameBudget <= 0) {
@@ -91,7 +104,7 @@ function parseArgs(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
       process.stdout.write(
-        "Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--max-frames 600]\n",
+        "Usage: pnpm bench <action-file.json> [--runs-dir runs] [--bundle run.json] [--trace trace.json] [--model model-id] [--reasoning-file notes.md] [--max-frames 600]\n",
       );
       process.exit(0);
     } else if (!actionFile) {
@@ -107,7 +120,49 @@ function parseArgs(args: string[]): CliOptions {
     );
   }
 
-  return { actionFile, bundleFile, runsDir, traceFile, frameBudget };
+  return { actionFile, bundleFile, runsDir, traceFile, frameBudget, model, reasoningFile };
+}
+
+async function createBenchmarkMetadata(options: CliOptions): Promise<{ model?: string; reasoning?: string }> {
+  const model = options.model ?? inferModelFromAgentRunPath(options.actionFile);
+  const reasoning = await readReasoning(options.reasoningFile ?? join(dirname(options.actionFile), "notes.md"));
+  return {
+    ...(model ? { model } : {}),
+    ...(reasoning ? { reasoning } : {}),
+  };
+}
+
+function inferModelFromAgentRunPath(actionFile: string): string | null {
+  const parts = normalize(actionFile).split(/[\\/]+/);
+  const runsIndex = parts.lastIndexOf("agent-runs");
+  const model = runsIndex >= 0 ? parts[runsIndex + 1] : undefined;
+  return model && !model.startsWith("_") ? model : null;
+}
+
+async function readReasoning(path: string): Promise<string | null> {
+  try {
+    const content = await readFile(path, "utf8");
+    return extractReasoning(content);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function extractReasoning(content: string): string | null {
+  const lines = content.split(/\r?\n/);
+  const reasoningStart = lines.findIndex((line) => /^#{1,3}\s*(reasoning|observations?|next idea|notes)\b/i.test(line.trim()));
+  const selectedLines = reasoningStart >= 0 ? lines.slice(reasoningStart + 1) : lines;
+  const compact = selectedLines
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("```") && !line.startsWith("pnpm bench"))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return compact || null;
 }
 
 function requireArgValue(args: string[], index: number, name: string): string {

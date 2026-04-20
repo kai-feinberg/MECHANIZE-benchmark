@@ -22,11 +22,9 @@ const levelSelect = requireElement<HTMLSelectElement>("#level-select");
 const strokeCountEl = requireElement<HTMLElement>("#stroke-count");
 const playStats = requireElement<HTMLElement>("#play-stats");
 const traceStats = requireElement<HTMLElement>("#trace-stats");
-const traceRunEl = requireElement<HTMLElement>("#trace-run");
 const traceResultEl = requireElement<HTMLElement>("#trace-result");
 const traceFrameEl = requireElement<HTMLElement>("#trace-frame");
 const traceQuietEl = requireElement<HTMLElement>("#trace-quiet");
-const traceModelEl = requireElement<HTMLElement>("#trace-model");
 const traceReasoningEl = requireElement<HTMLElement>("#trace-reasoning");
 const strokeJsonEl = requireElement<HTMLTextAreaElement>("#stroke-json");
 const toggleRunButton = requireElement<HTMLButtonElement>("#toggle-run");
@@ -37,11 +35,18 @@ const playControls = requireElement<HTMLElement>("#play-controls");
 const traceControls = requireElement<HTMLElement>("#trace-controls");
 const strokeExport = requireElement<HTMLElement>("#stroke-export");
 const runBundleInput = requireElement<HTMLInputElement>("#run-bundle");
+const runBrowserStatusEl = requireElement<HTMLElement>("#run-browser-status");
+const runBrowserRefreshButton = requireElement<HTMLButtonElement>("#run-browser-refresh");
+const runBrowserAgentSelect = requireElement<HTMLSelectElement>("#run-browser-agent");
+const runBrowserLevelSelect = requireElement<HTMLSelectElement>("#run-browser-level");
+const runBrowserAttemptSelect = requireElement<HTMLSelectElement>("#run-browser-attempt");
+const runBrowserPrevButton = requireElement<HTMLButtonElement>("#run-browser-prev");
+const runBrowserNextButton = requireElement<HTMLButtonElement>("#run-browser-next");
 const traceScrubber = requireElement<HTMLInputElement>("#trace-scrubber");
 const tracePlayButton = requireElement<HTMLButtonElement>("#trace-play");
-const tracePrevButton = requireElement<HTMLButtonElement>("#trace-prev");
-const traceNextButton = requireElement<HTMLButtonElement>("#trace-next");
-const tracePhysicsButton = requireElement<HTMLButtonElement>("#trace-physics");
+const tracePlayIconEl = requireElement<HTMLElement>("#trace-play-icon");
+const tracePlayLabelEl = requireElement<HTMLElement>("#trace-play-label");
+const tracePhysicsInput = requireElement<HTMLInputElement>("#trace-physics");
 const traceSpeedSelect = requireElement<HTMLSelectElement>("#trace-speed");
 const context = requireCanvasContext(canvas);
 
@@ -68,8 +73,22 @@ let traceStrokeLocalPoints = new Map<string, Vec2[]>();
 let traceBodyLocalVertices = new Map<string, Vec2[][]>();
 let traceLevel: LevelDefinition = sim.level;
 let traceStaticSim = createSimulation(traceLevel);
+let runBrowserAttempts: AgentRunAttempt[] = [];
+let selectedRunPath: string | null = null;
+let runBrowserLoaded = false;
+let runBrowserLoading = false;
+let traceNotesReasoning: string | null = null;
 
 const strokeWidth = 18;
+
+type AgentRunAttempt = {
+  agent: string;
+  levelId: string;
+  attempt: string;
+  runPath: string;
+  actionPath: string | null;
+  notesPath: string | null;
+};
 
 function resizeCanvas(): void {
   const parent = canvas.parentElement;
@@ -674,38 +693,226 @@ function updateTraceUi(): void {
   const quietFrames = frame?.quietFrames ?? result?.quietFrames ?? 0;
 
   modeEyebrowEl.textContent = "Trace replay";
-  traceRunEl.textContent = traceBundle ? traceBundle.level.id : "No run loaded";
   traceResultEl.textContent = result ? (result.success ? "Pass" : `Fail: ${result.terminalState}`) : "Waiting";
   traceFrameEl.textContent = result ? `Frame ${currentFrame}/${result.terminalFrame}` : `Frames ${totalFrames}`;
   traceQuietEl.textContent = `Quiet ${quietFrames}`;
-  traceModelEl.textContent = formatTraceModel(traceBundle);
-  traceReasoningEl.textContent = traceBundle?.metadata.reasoning ?? "No AI reasoning recorded.";
+  traceReasoningEl.textContent = getTraceReasoning();
   levelTitleEl.textContent = traceBundle ? traceBundle.level.instruction : "Trace viewer";
   levelCopyEl.textContent = result
     ? `Terminal ${result.terminalFrame} · ${result.strokeCount} stroke · ${Math.round(result.strokeLength)} px`
     : "Upload a run from the project runs folder to inspect recorded frames.";
-  tracePlayButton.textContent = tracePlaying ? "Pause" : "Play";
-  tracePhysicsButton.textContent = showPhysicsBodies ? "Show visual" : "Show physics";
+  tracePlayIconEl.textContent = tracePlaying ? "❚❚" : "▶";
+  tracePlayLabelEl.textContent = tracePlaying ? "Pause" : "Play";
+  tracePhysicsInput.checked = showPhysicsBodies;
   traceScrubber.max = String(Math.max(0, totalFrames - 1));
   traceScrubber.value = String(traceFrameIndex);
+  updateRunBrowserUi();
 }
 
-function formatTraceModel(bundle: BenchmarkRunBundle | null): string {
-  if (!bundle) {
-    return "No run loaded";
+function getTraceReasoning(): string {
+  const reasoning = traceBundle?.metadata.reasoning?.trim() || traceNotesReasoning?.trim();
+  return reasoning || "No reasoning recorded.";
+}
+
+async function refreshRunBrowser(): Promise<void> {
+  runBrowserLoading = true;
+  runBrowserStatusEl.textContent = "Scanning";
+  updateRunBrowserUi();
+
+  try {
+    const response = await fetch("/api/agent-runs");
+    if (!response.ok) {
+      throw new Error(`Run browser returned ${response.status}.`);
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (!isRecord(payload) || !Array.isArray(payload.attempts)) {
+      throw new Error("Run browser response was not valid.");
+    }
+
+    runBrowserAttempts = payload.attempts.filter(isAgentRunAttempt);
+    runBrowserLoaded = true;
+    syncRunBrowserSelections();
+    updateRunBrowserUi();
+
+    if (!traceBundle && runBrowserAttempts.length > 0) {
+      await loadSelectedAgentRun();
+    }
+  } catch (error) {
+    runBrowserStatusEl.textContent = error instanceof Error ? error.message : "Could not scan agent runs.";
+  } finally {
+    runBrowserLoading = false;
+    updateRunBrowserUi();
   }
-  if (bundle.metadata.source !== "openrouter" || !bundle.metadata.model) {
-    return "Manual run";
+}
+
+function syncRunBrowserSelections(): void {
+  const agents = uniqueSorted(runBrowserAttempts.map((attempt) => attempt.agent));
+  replaceOptions(runBrowserAgentSelect, agents, "No agent runs");
+
+  if (selectedRunPath) {
+    const selected = runBrowserAttempts.find((attempt) => attempt.runPath === selectedRunPath);
+    if (selected) {
+      runBrowserAgentSelect.value = selected.agent;
+    }
+  }
+  if (!runBrowserAgentSelect.value && agents[0]) {
+    runBrowserAgentSelect.value = agents[0];
   }
 
-  const parts = [bundle.metadata.model];
-  if (bundle.metadata.provider) {
-    parts.push(`via ${bundle.metadata.provider}`);
+  const levels = uniqueSorted(
+    runBrowserAttempts
+      .filter((attempt) => attempt.agent === runBrowserAgentSelect.value)
+      .map((attempt) => attempt.levelId),
+  );
+  replaceOptions(runBrowserLevelSelect, levels, "No levels");
+
+  const selected = selectedRunPath ? runBrowserAttempts.find((attempt) => attempt.runPath === selectedRunPath) : null;
+  if (selected && selected.agent === runBrowserAgentSelect.value) {
+    runBrowserLevelSelect.value = selected.levelId;
   }
-  if (bundle.metadata.temperature !== undefined) {
-    parts.push(`temp ${bundle.metadata.temperature}`);
+  if (!runBrowserLevelSelect.value && levels[0]) {
+    runBrowserLevelSelect.value = levels[0];
   }
-  return parts.join(" · ");
+
+  const attempts = getVisibleRunAttempts();
+  replaceOptions(
+    runBrowserAttemptSelect,
+    attempts.map((attempt) => attempt.attempt),
+    "No attempts",
+  );
+  if (selected && selected.agent === runBrowserAgentSelect.value && selected.levelId === runBrowserLevelSelect.value) {
+    runBrowserAttemptSelect.value = selected.attempt;
+  }
+  if (!runBrowserAttemptSelect.value && attempts[0]) {
+    runBrowserAttemptSelect.value = attempts[0].attempt;
+  }
+}
+
+function updateRunBrowserUi(): void {
+  const attempts = getVisibleRunAttempts();
+  const selectedIndex = getSelectedRunIndex();
+
+  if (runBrowserLoading) {
+    runBrowserStatusEl.textContent = "Scanning";
+  } else if (!runBrowserLoaded) {
+    runBrowserStatusEl.textContent = "Ready to scan";
+  } else if (runBrowserAttempts.length === 0) {
+    runBrowserStatusEl.textContent = "No run.json files";
+  } else if (selectedIndex >= 0) {
+    const selected = attempts[selectedIndex];
+    runBrowserStatusEl.textContent = `${selectedIndex + 1} of ${attempts.length} · ${selected.attempt}`;
+  } else {
+    runBrowserStatusEl.textContent = `${runBrowserAttempts.length} runs`;
+  }
+
+  runBrowserAgentSelect.disabled = runBrowserAttempts.length === 0;
+  runBrowserLevelSelect.disabled = runBrowserAttempts.length === 0;
+  runBrowserAttemptSelect.disabled = attempts.length === 0;
+  runBrowserPrevButton.disabled = selectedIndex <= 0;
+  runBrowserNextButton.disabled = selectedIndex < 0 || selectedIndex >= attempts.length - 1;
+}
+
+async function loadSelectedAgentRun(): Promise<void> {
+  const attempt = getSelectedRunAttempt();
+  if (!attempt) {
+    return;
+  }
+
+  try {
+    const response = await fetch(attempt.runPath);
+    if (!response.ok) {
+      throw new Error(`Could not load ${attempt.runPath}.`);
+    }
+
+    setTraceBundle(parseRunBundle((await response.json()) as unknown), attempt.runPath);
+    traceNotesReasoning = await loadAttemptReasoning(attempt);
+    updateUi();
+  } catch (error) {
+    traceBundle = null;
+    traceNotesReasoning = null;
+    tracePlaying = false;
+    levelCopyEl.textContent = error instanceof Error ? error.message : "Could not load this agent run.";
+  }
+}
+
+async function loadAttemptReasoning(attempt: AgentRunAttempt): Promise<string | null> {
+  if (!attempt.notesPath) {
+    return null;
+  }
+
+  const response = await fetch(attempt.notesPath);
+  if (!response.ok) {
+    return null;
+  }
+
+  return extractReasoningFromNotes(await response.text());
+}
+
+function extractReasoningFromNotes(notes: string): string | null {
+  const lines = notes.split(/\r?\n/);
+  const reasoningStart = lines.findIndex((line) => /^#{1,3}\s*(reasoning|observations?|next idea|notes)\b/i.test(line.trim()));
+  const selectedLines = reasoningStart >= 0 ? lines.slice(reasoningStart + 1) : lines;
+  const compact = selectedLines
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("```") && !line.startsWith("pnpm bench"))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return compact ? compact.slice(0, 900) : null;
+}
+
+async function loadAdjacentAgentRun(direction: -1 | 1): Promise<void> {
+  const attempts = getVisibleRunAttempts();
+  const selectedIndex = getSelectedRunIndex();
+  if (selectedIndex < 0) {
+    return;
+  }
+
+  const next = attempts[selectedIndex + direction];
+  if (!next) {
+    return;
+  }
+
+  runBrowserAttemptSelect.value = next.attempt;
+  await loadSelectedAgentRun();
+}
+
+function getSelectedRunAttempt(): AgentRunAttempt | null {
+  return (
+    getVisibleRunAttempts().find((attempt) => attempt.attempt === runBrowserAttemptSelect.value) ??
+    getVisibleRunAttempts()[0] ??
+    null
+  );
+}
+
+function getSelectedRunIndex(): number {
+  const attempts = getVisibleRunAttempts();
+  return attempts.findIndex((attempt) => attempt.attempt === runBrowserAttemptSelect.value);
+}
+
+function getVisibleRunAttempts(): AgentRunAttempt[] {
+  return runBrowserAttempts.filter(
+    (attempt) => attempt.agent === runBrowserAgentSelect.value && attempt.levelId === runBrowserLevelSelect.value,
+  );
+}
+
+function replaceOptions(select: HTMLSelectElement, values: string[], emptyLabel: string): void {
+  const previousValue = select.value;
+  select.replaceChildren(
+    ...(values.length > 0 ? values : [""]).map((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value || emptyLabel;
+      return option;
+    }),
+  );
+  select.value = values.includes(previousValue) ? previousValue : (values[0] ?? "");
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
 }
 
 function formatTraceModelLabel(bundle: BenchmarkRunBundle | null): string {
@@ -808,6 +1015,9 @@ function setMode(nextMode: "play" | "trace"): void {
   tracePlaying = mode === "trace" && tracePlaying;
   resizeCanvas();
   updateUi();
+  if (mode === "trace" && !runBrowserLoaded && !runBrowserLoading) {
+    void refreshRunBrowser();
+  }
 }
 
 async function loadRunBundle(): Promise<void> {
@@ -817,17 +1027,7 @@ async function loadRunBundle(): Promise<void> {
   }
 
   try {
-    const bundle = parseRunBundle(JSON.parse(await file.text()) as unknown);
-    traceBundle = bundle;
-    traceLevel = bundle.level;
-    traceStaticSim = createSimulation(bundle.level);
-    traceStrokeLocalPoints = buildTraceStrokeLocalPoints(bundle);
-    traceBodyLocalVertices = buildTraceBodyLocalVertices(traceStaticSim);
-    traceFrameIndex = 0;
-    traceAccumulator = 0;
-    tracePlaying = false;
-    resizeCanvas();
-    updateUi();
+    setTraceBundle(parseRunBundle(JSON.parse(await file.text()) as unknown), null);
   } catch (error) {
     traceBundle = null;
     tracePlaying = false;
@@ -835,6 +1035,24 @@ async function loadRunBundle(): Promise<void> {
     statusEl.textContent = "Invalid run";
     levelCopyEl.textContent = error instanceof Error ? error.message : "Could not load this run bundle.";
   }
+}
+
+function setTraceBundle(bundle: BenchmarkRunBundle, runPath: string | null): void {
+  traceBundle = bundle;
+  selectedRunPath = runPath;
+  traceNotesReasoning = null;
+  traceLevel = bundle.level;
+  traceStaticSim = createSimulation(bundle.level);
+  traceStrokeLocalPoints = buildTraceStrokeLocalPoints(bundle);
+  traceBodyLocalVertices = buildTraceBodyLocalVertices(traceStaticSim);
+  traceFrameIndex = 0;
+  traceAccumulator = 0;
+  tracePlaying = false;
+  if (runPath) {
+    syncRunBrowserSelections();
+  }
+  resizeCanvas();
+  updateUi();
 }
 
 function parseRunBundle(value: unknown): BenchmarkRunBundle {
@@ -891,6 +1109,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isAgentRunAttempt(value: unknown): value is AgentRunAttempt {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value.agent === "string" &&
+    typeof value.levelId === "string" &&
+    typeof value.attempt === "string" &&
+    typeof value.runPath === "string" &&
+    (typeof value.actionPath === "string" || value.actionPath === null) &&
+    (typeof value.notesPath === "string" || value.notesPath === null)
+  );
+}
+
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("keydown", handleKeydown);
 playModeButton.addEventListener("click", () => setMode("play"));
@@ -913,6 +1145,28 @@ clearStrokeButton.addEventListener("click", clearStroke);
 runBundleInput.addEventListener("change", () => {
   void loadRunBundle();
 });
+runBrowserRefreshButton.addEventListener("click", () => {
+  void refreshRunBrowser();
+});
+runBrowserAgentSelect.addEventListener("change", () => {
+  selectedRunPath = null;
+  syncRunBrowserSelections();
+  void loadSelectedAgentRun();
+});
+runBrowserLevelSelect.addEventListener("change", () => {
+  selectedRunPath = null;
+  syncRunBrowserSelections();
+  void loadSelectedAgentRun();
+});
+runBrowserAttemptSelect.addEventListener("change", () => {
+  void loadSelectedAgentRun();
+});
+runBrowserPrevButton.addEventListener("click", () => {
+  void loadAdjacentAgentRun(-1);
+});
+runBrowserNextButton.addEventListener("click", () => {
+  void loadAdjacentAgentRun(1);
+});
 traceScrubber.addEventListener("input", () => {
   setTraceFrame(Number(traceScrubber.value));
   updateUi();
@@ -927,18 +1181,8 @@ tracePlayButton.addEventListener("click", () => {
   tracePlaying = !tracePlaying;
   updateUi();
 });
-tracePrevButton.addEventListener("click", () => {
-  tracePlaying = false;
-  setTraceFrame(traceFrameIndex - 1);
-  updateUi();
-});
-traceNextButton.addEventListener("click", () => {
-  tracePlaying = false;
-  setTraceFrame(traceFrameIndex + 1);
-  updateUi();
-});
-tracePhysicsButton.addEventListener("click", () => {
-  showPhysicsBodies = !showPhysicsBodies;
+tracePhysicsInput.addEventListener("change", () => {
+  showPhysicsBodies = tracePhysicsInput.checked;
   updateUi();
 });
 traceSpeedSelect.addEventListener("change", updateUi);
